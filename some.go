@@ -2,26 +2,34 @@ package main
 
 import (
 	"fmt"
-	"net"
 	"strconv"
 	"strings"
 )
 
+var setGetMap = make(map[string]string);
+
 func main() {
 	// *1\r\n$4\r\nPING\r\n
 	// *2\r\n$4\r\nECHO\r\n$3\r\nhey\r\n
+	// *3\r\n$3\r\nSET\r\n$3\r\nfoo\r\n$3\r\nbar\r\n
+	// *2\r\n$3\r\nGET\r\n$3\r\nfoo\r\n
+
 	// data := []byte("*2\r\n$4\r\nECHO\r\n$3\r\nhey\r\n");
 	// data := []byte("*1\r\n$4\r\nPING\r\n");
-	// handleArray(data);
+	// data := []byte("*3\r\n$3\r\nSET\r\n$3\r\nfoo\r\n$3\r\nbar\r\n");
+	data := []byte("*2\r\n$3\r\nGET\r\n$3\r\nfoo\r\n");
+	handleArray(data);
 }
 
-func handleArray(data []byte, connection net.Conn) {
+func handleArray(data []byte) {
 	dataStr := string(data);
 	parts := strings.Split(dataStr, "\r\n");
 	fmt.Println(parts);
 	
 	numberOfElements, _ := strconv.Atoi(strings.Split(parts[0], "*")[1]);
+	fmt.Println("Number of elements: ", numberOfElements);
 	actualNumberOfElements := (len(parts) - 1) / 2;
+	fmt.Println("Actual number of elements: ", actualNumberOfElements);
 
 	if numberOfElements != actualNumberOfElements {
         fmt.Println("Error: Number of elements does not match")
@@ -54,11 +62,40 @@ func handleArray(data []byte, connection net.Conn) {
 		}
 		if strings.ToLower(parts[2]) == "echo" {
 			dataToEcho := "$" + strconv.Itoa(len(parts[4])) + "\r\n" + parts[4] + "\r\n";
-			// _, err := connection.Write([]byte(dataToEcho));
+			fmt.Println(dataToEcho);
+		} else if strings.ToLower(parts[2]) == "set" {
+			key := parts[4];
+			value := parts[6];
+				
+			setGetMap[key] = value;
+
+			fmt.Println("Key: ", key);
+			fmt.Println("Value: ", setGetMap[key]);
+
+			// _, err := connection.Write([]byte("+OK\r\n"));
 			// if err != nil {
 			// 	fmt.Println("Error writing:", err.Error());
 			// }
-			fmt.Println(dataToEcho);
+			
+			fmt.Println("OK");
+		} else if strings.ToLower(parts[2]) == "get" {
+			keyToGet, ok := setGetMap[parts[4]];
+			if ok {
+				dataToSend := "$" + strconv.Itoa(len(keyToGet)) + "\r\n" + keyToGet + "\r\n";
+				// _, err := connection.Write([]byte(dataToSend));
+				// if err != nil {
+				// 	fmt.Println("Error writing:", err.Error());
+				// }
+				
+				fmt.Println(dataToSend);
+			} else {
+				// _, err := connection.Write([]byte("$-1\r\n"));
+				// if err != nil {
+				// 	fmt.Println("Error writing:", err.Error());
+				// }
+				
+				fmt.Println("$-1\r\n");
+			}
 		}
     }
 }

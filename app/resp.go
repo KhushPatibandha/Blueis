@@ -7,6 +7,8 @@ import (
 	"strings"
 )
 
+var setGetMap = make(map[string]string);
+
 func ParseData(data []byte, connection net.Conn) {
 	if data[0] == '$' {
 		handleBulkStrings(data);
@@ -56,6 +58,34 @@ func handleArray(data []byte, connection net.Conn) {
 			_, err := connection.Write([]byte(dataToEcho));
 			if err != nil {
 				fmt.Println("Error writing:", err.Error());
+			}
+		} else if strings.ToLower(parts[2]) == "set" {
+			key := parts[4];
+			value := parts[6];
+				
+			setGetMap[key] = value;
+
+			fmt.Println("Key: ", key);
+			fmt.Println("Value: ", setGetMap[key]);
+
+			_, err := connection.Write([]byte("+OK\r\n"));
+			if err != nil {
+				fmt.Println("Error writing:", err.Error());
+			}
+			
+		} else if strings.ToLower(parts[2]) == "get" {
+			keyToGet, ok := setGetMap[parts[4]];
+			if ok {
+				dataToSend := "$" + strconv.Itoa(len(keyToGet)) + "\r\n" + keyToGet + "\r\n";
+				_, err := connection.Write([]byte(dataToSend));
+				if err != nil {
+					fmt.Println("Error writing:", err.Error());
+				}
+			} else {
+				_, err := connection.Write([]byte("$-1\r\n"));
+				if err != nil {
+					fmt.Println("Error writing:", err.Error());
+				}
 			}
 		}
     }
