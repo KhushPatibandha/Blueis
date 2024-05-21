@@ -20,15 +20,17 @@ func main() {
 		os.Exit(1)
 	}
 	defer connection.Close();
-
-	buf := make([]byte, 1024);
-	_, err = connection.Read(buf);
-	if err != nil {
-		fmt.Println("Error reading:", err.Error());
+	
+	for  {
+		buf := make([]byte, 1024);
+		_, err = connection.Read(buf);
+		if err != nil {
+			fmt.Println("Error reading:", err.Error());
+		}
+		
+		fmt.Printf("Received data: %v", string(buf));
+		handlePing(connection);
 	}
-
-	fmt.Printf("Received data: %v", string(buf));
-	handlePing(connection);
 }
 
 func handlePing(connection net.Conn) {
