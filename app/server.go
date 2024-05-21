@@ -32,15 +32,6 @@ func handleConnection(connection net.Conn) {
 		if err != nil {
 			fmt.Println("Error reading:", err.Error());
 		}
-		
-		fmt.Printf("Received data: %v", string(buf));
-		handlePing(connection);
-	}
-}
-
-func handlePing(connection net.Conn) {
-	_, err := connection.Write([]byte("+PONG\r\n"));
-	if err != nil {
-		fmt.Println("Error writing:", err.Error());
+		ParseData(buf, connection);
 	}
 }
