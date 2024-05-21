@@ -5,9 +5,11 @@ import (
 	"net"
 	"strconv"
 	"strings"
+	"time"
 )
 
 var setGetMap = make(map[string]string);
+var expiryMap = make(map[string]time.Time)
 
 func ParseData(data []byte, connection net.Conn) {
 	if data[0] == '$' {
@@ -60,13 +62,26 @@ func handleArray(data []byte, connection net.Conn) {
 				fmt.Println("Error writing:", err.Error());
 			}
 		} else if strings.ToLower(parts[2]) == "set" {
-			key := parts[4];
+			
+			key	:= parts[4];
 			value := parts[6];
-				
+
 			setGetMap[key] = value;
 
-			fmt.Println("Key: ", key);
-			fmt.Println("Value: ", setGetMap[key]);
+			if len(parts) == 12 {
+				expiry, err := strconv.Atoi(parts[10]);
+				if err != nil {
+					fmt.Println("Error converting expiry to int, may be enter valid expiry?");
+				}
+
+				if strings.ToLower(parts[8]) == "px" {
+					expiryMap[key] = time.Now().Add(time.Duration(expiry) * time.Millisecond);
+				} else if strings.ToLower(parts[8]) == "ex" {
+					expiryMap[key] = time.Now().Add(time.Duration(expiry) * time.Second);
+				} else {
+					fmt.Println("Invalid expiry type; use PX for milliseconds or EX for seconds");
+				}
+			}
 
 			_, err := connection.Write([]byte("+OK\r\n"));
 			if err != nil {
@@ -76,6 +91,20 @@ func handleArray(data []byte, connection net.Conn) {
 		} else if strings.ToLower(parts[2]) == "get" {
 			keyToGet, ok := setGetMap[parts[4]];
 			if ok {
+				expiry, ok := expiryMap[parts[4]];
+
+				if ok && time.Now().After(expiry) {
+					delete(setGetMap, parts[4]);
+					delete(expiryMap, parts[4]);
+
+					_, err := connection.Write([]byte("$-1\r\n"));
+					if err != nil {
+						fmt.Println("Error writing:", err.Error());
+					}	
+
+					return;
+				}
+
 				dataToSend := "$" + strconv.Itoa(len(keyToGet)) + "\r\n" + keyToGet + "\r\n";
 				_, err := connection.Write([]byte(dataToSend));
 				if err != nil {
