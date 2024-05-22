@@ -24,7 +24,7 @@ func main() {
     if *replicaof != "" {
         role = "slave"
         masterHost, masterPort := splitHostPort(*replicaof)
-        connectToMaster(masterHost + ":" + masterPort)
+        connectToMaster(masterHost + ":" + masterPort, *port);
     }
 
     l, err := net.Listen("tcp", "0.0.0.0:"+*port)
@@ -44,15 +44,36 @@ func main() {
     }
 }
 
-func connectToMaster(master string) {
+func connectToMaster(master string, port string) {
     conn, err := net.Dial("tcp", master)
     if err != nil {
         fmt.Println("Failed to connect to master", master)
         fmt.Println("Error:", err);
 		os.Exit(1)
     }
+	defer conn.Close();
+	buf := make([]byte, 1024)
 
     fmt.Fprintf(conn, "*1\r\n$4\r\nPING\r\n")
+    _, err = conn.Read(buf)
+    if err != nil {
+        fmt.Println("Error reading:", err.Error())
+        os.Exit(1)
+    }
+
+	fmt.Fprintf(conn, "*3\r\n$8\r\nREPLCONF\r\n$14\r\nlistening-port\r\n$%d\r\n%s\r\n", len(port), port)
+    _, err = conn.Read(buf)
+    if err != nil {
+        fmt.Println("Error reading:", err.Error())
+        os.Exit(1)
+    }
+
+	fmt.Fprintf(conn, "*3\r\n$8\r\nREPLCONF\r\n$4\r\ncapa\r\n$6\r\npsync2\r\n")
+    _, err = conn.Read(buf)
+    if err != nil {
+        fmt.Println("Error reading:", err.Error())
+        os.Exit(1)
+    }
 }
 
 func handleConnection(connection net.Conn) {

@@ -139,6 +139,18 @@ func handleArray(data []byte, connection net.Conn) {
 					fmt.Println("Error writing:", err.Error())
 				}
 			}
+		} else if strings.ToLower(parts[2]) == "replconf" {
+			if strings.ToLower(parts[4]) == "listening-port" {
+				_, err := connection.Write([]byte("+OK\r\n"));
+				if err != nil {
+					fmt.Println("Error writing:", err.Error());
+				}
+			} else if strings.ToLower(parts[4]) == "capa" {
+				_, err := connection.Write([]byte("+OK\r\n"));
+				if err != nil {
+					fmt.Println("Error writing:", err.Error());
+				}
+			}
 		}
     }
 }
