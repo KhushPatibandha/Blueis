@@ -151,6 +151,12 @@ func handleArray(data []byte, connection net.Conn) {
 					fmt.Println("Error writing:", err.Error());
 				}
 			}
+		} else if strings.ToLower(parts[2]) == "psync" && strings.ToLower(parts[4]) == "?" && strings.ToLower(parts[6]) == "-1" {
+			dataToSend := "+FULLRESYNC " + replId + " 0\r\n";
+			_, err := connection.Write([]byte(dataToSend));
+			if err != nil {
+				fmt.Println("Error writing:", err.Error());
+			}
 		}
     }
 }

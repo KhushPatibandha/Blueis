@@ -74,6 +74,13 @@ func connectToMaster(master string, port string) {
         fmt.Println("Error reading:", err.Error())
         os.Exit(1)
     }
+
+	fmt.Fprintf(conn, "*3\r\n$5\r\nPSYNC\r\n$1\r\n?\r\n$2\r\n-1\r\n")
+	_, err = conn.Read(buf)
+    if err != nil {
+        fmt.Println("Error reading:", err.Error())
+        os.Exit(1)
+    }
 }
 
 func handleConnection(connection net.Conn) {
