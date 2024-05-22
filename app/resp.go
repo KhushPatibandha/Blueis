@@ -118,7 +118,14 @@ func handleArray(data []byte, connection net.Conn) {
 			}
 		} else if strings.ToLower(parts[2]) == "info" {
 			if strings.ToLower(parts[4]) == "replication" {
-				role := "role:master";
+				role := "";
+
+				if GetRole() == "slave" {
+					role = "role:slave";
+				} else {
+					role = "role:master";
+				}
+
 				dataToSend := "$" + strconv.Itoa(len(role)) + "\r\n" + role + "\r\n";
 
 				_, err := connection.Write([]byte(dataToSend));

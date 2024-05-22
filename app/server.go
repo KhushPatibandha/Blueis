@@ -8,9 +8,16 @@ import (
 	"os"
 )
 
+var Role = "master";
+
 func main() {
-    port := flag.String("port", "6379", "port to listen on")
-    flag.Parse()
+    port := flag.String("port", "6379", "port to listen on");
+	replicaof := flag.String("replicaof", "", "master server to replicate from");
+    flag.Parse();
+
+	if *replicaof != "" {
+		Role = "slave";
+	}
 
     l, err := net.Listen("tcp", "0.0.0.0:"+*port)
     if err != nil {
@@ -44,14 +51,6 @@ func handleConnection(connection net.Conn) {
     }
 }
 
-// func handleConnection(connection net.Conn) {
-//     defer connection.Close()
-//     for {
-//         buf := make([]byte, 1024)
-//         _, err := connection.Read(buf)
-//         if err != nil {
-//             fmt.Println("Error reading:", err.Error())
-//         }
-//         ParseData(buf, connection)
-//     }
-// }
+func GetRole() string {
+	return Role;
+}
