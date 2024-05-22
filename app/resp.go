@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/hex"
 	"fmt"
 	"net"
 	"strconv"
@@ -22,7 +23,6 @@ func ParseData(data []byte, connection net.Conn) {
 func handleArray(data []byte, connection net.Conn) {
 	dataStr := string(data);
 	parts := strings.Split(dataStr, "\r\n");
-	fmt.Println(parts);
 	
 	numberOfElements, _ := strconv.Atoi(strings.Split(parts[0], "*")[1]);
 	actualNumberOfElements := (len(parts) - 1) / 2;
@@ -49,7 +49,6 @@ func handleArray(data []byte, connection net.Conn) {
 		for i := 1; i < len(parts) - 1; i += 2 {
 			wordLen, _ := strconv.Atoi(strings.Split(parts[i], "$")[1]);
 			actualWordLen := len(parts[i+1]);
-			fmt.Println(actualWordLen);
 			if wordLen != actualWordLen {
 				fmt.Println("Error: Word length does not match")
 				return
@@ -155,6 +154,15 @@ func handleArray(data []byte, connection net.Conn) {
 			dataToSend := "+FULLRESYNC " + replId + " 0\r\n";
 			_, err := connection.Write([]byte(dataToSend));
 			if err != nil {
+				fmt.Println("Error writing:", err.Error());
+			}
+
+			rdbHex := "524544495330303131fa0972656469732d76657205372e322e30fa0a72656469732d62697473c040fa056374696d65c26d08bc65fa08757365642d6d656dc2b0c41000fa08616f662d62617365c000fff06e3bfec0ff5aa2";
+			rdbBytes, _ := hex.DecodeString(rdbHex);
+
+			dataToSend = "$" + strconv.Itoa(len(rdbBytes)) + "\r\n" + string(rdbBytes);
+			_, err2 := connection.Write([]byte(dataToSend));
+			if err2 != nil {
 				fmt.Println("Error writing:", err.Error());
 			}
 		}
