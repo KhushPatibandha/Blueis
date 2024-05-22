@@ -7,6 +7,7 @@ import (
 	"math/rand"
 	"net"
 	"os"
+	"strings"
 	"time"
 )
 
@@ -16,13 +17,15 @@ var role = "master";
 var replId = getHash(40);
 
 func main() {
-    port := flag.String("port", "6379", "port to listen on");
-	replicaof := flag.String("replicaof", "", "master server to replicate from");
-    flag.Parse();
+    port := flag.String("port", "6379", "port to listen on")
+    replicaof := flag.String("replicaof", "", "master server to replicate from")
+    flag.Parse()
 
-	if *replicaof != "" {
-		role = "slave";
-	}
+    if *replicaof != "" {
+        role = "slave"
+        masterHost, masterPort := splitHostPort(*replicaof)
+        connectToMaster(masterHost + ":" + masterPort)
+    }
 
     l, err := net.Listen("tcp", "0.0.0.0:"+*port)
     if err != nil {
@@ -39,6 +42,17 @@ func main() {
         }
         go handleConnection(connection)
     }
+}
+
+func connectToMaster(master string) {
+    conn, err := net.Dial("tcp", master)
+    if err != nil {
+        fmt.Println("Failed to connect to master", master)
+        fmt.Println("Error:", err);
+		os.Exit(1)
+    }
+
+    fmt.Fprintf(conn, "*1\r\n$4\r\nPING\r\n")
 }
 
 func handleConnection(connection net.Conn) {
@@ -74,4 +88,9 @@ func GetRole() string {
 
 func GetReplId() string {
 	return replId;
+}
+
+func splitHostPort(replicaof string) (string, string) {
+    parts := strings.Split(replicaof, " ")
+    return parts[0], parts[1]
 }
