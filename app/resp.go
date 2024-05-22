@@ -116,6 +116,16 @@ func handleArray(data []byte, connection net.Conn) {
 					fmt.Println("Error writing:", err.Error());
 				}
 			}
+		} else if strings.ToLower(parts[2]) == "info" {
+			if strings.ToLower(parts[4]) == "replication" {
+				role := "role:master";
+				dataToSend := "$" + strconv.Itoa(len(role)) + "\r\n" + role + "\r\n";
+
+				_, err := connection.Write([]byte(dataToSend));
+				if err != nil {
+					fmt.Println("Error writing:", err.Error());
+				}
+			}
 		}
     }
 }
