@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"math/rand"
 	"strconv"
 	"strings"
 	"time"
@@ -10,6 +11,22 @@ import (
 var setGetMap = make(map[string]string);
 var expiryMap = make(map[string]time.Time)
 
+const charset = "abcdefghijklmnopqrstuvwxyz" + "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+var seededRand *rand.Rand = rand.New(rand.NewSource(time.Now().UnixNano()));
+
+func StringWithCharset(length int, charset string) string {
+    b := make([]byte, length)
+    for i := range b {
+        b[i] = charset[seededRand.Intn(len(charset))]
+    }
+    return string(b)
+}
+
+func getHash(length int) string {
+    return StringWithCharset(length, charset)
+}
+
+var s = getHash(40);
 func main() {
 	// *1\r\n$4\r\nPING\r\n
 	// *2\r\n$4\r\nECHO\r\n$3\r\nhey\r\n
@@ -26,6 +43,9 @@ func main() {
 	data := []byte("*2\r\n$4\r\nINFO\r\n$11\r\nreplication\r\n");
 
 	handleArray(data);
+
+	// fmt.Println(s);
+	// fmt.Println(len(s));
 }
 
 func handleArray(data []byte) {
@@ -154,15 +174,19 @@ func handleArray(data []byte) {
 			}
 		} else if strings.ToLower(parts[2]) == "info" {
 			if strings.ToLower(parts[4]) == "replication" {
-				role := "role:master";
-				dataToSend := "$" + strconv.Itoa(len(role)) + "\r\n" + role + "\r\n";
+				role := "master";
+				replId := s;
+				replOffset := "0";
 
-				// _, err := connection.Write([]byte(dataToSend));
-				// if err != nil {
-				// 	fmt.Println("Error writing:", err.Error());
-				// }
+				if role == "slave" {
+					role = "role:slave";
+				} else {
+					role = "role:master";
+				}
 
-				fmt.Println(dataToSend);
+				dataToSend := "$" + strconv.Itoa(len(role)) + "\r\n" + role + "\r\n" + "$" + strconv.Itoa(len(replId) + 14) + "\r\n" + "master_replid:" + replId + "\r\n" + "$" + strconv.Itoa(len(replOffset) + 19) + "\r\n" + "master_repl_offset:" + replOffset + "\r\n";
+
+				fmt.Println("dataToSend: ", dataToSend);
 			}
 		}
     }

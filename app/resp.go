@@ -119,6 +119,8 @@ func handleArray(data []byte, connection net.Conn) {
 		} else if strings.ToLower(parts[2]) == "info" {
 			if strings.ToLower(parts[4]) == "replication" {
 				role := "";
+				replId = GetReplId();
+				replOffset := "0";
 
 				if GetRole() == "slave" {
 					role = "role:slave";
@@ -126,11 +128,15 @@ func handleArray(data []byte, connection net.Conn) {
 					role = "role:master";
 				}
 
-				dataToSend := "$" + strconv.Itoa(len(role)) + "\r\n" + role + "\r\n";
+				dataToSend := "role:" + role + "\r\n" +
+							"master_replid:" + replId + "\r\n" +
+							"master_repl_offset:" + replOffset + "\r\n"
 
-				_, err := connection.Write([]byte(dataToSend));
+				respToSend := "$" + strconv.Itoa(len(dataToSend)) + "\r\n" + dataToSend + "\r\n"
+
+				_, err := connection.Write([]byte(respToSend))
 				if err != nil {
-					fmt.Println("Error writing:", err.Error());
+					fmt.Println("Error writing:", err.Error())
 				}
 			}
 		}

@@ -4,11 +4,16 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"math/rand"
 	"net"
 	"os"
+	"time"
 )
 
-var Role = "master";
+const charset = "abcdefghijklmnopqrstuvwxyz" + "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+var seededRand *rand.Rand = rand.New(rand.NewSource(time.Now().UnixNano()));
+var role = "master";
+var replId = getHash(40);
 
 func main() {
     port := flag.String("port", "6379", "port to listen on");
@@ -16,7 +21,7 @@ func main() {
     flag.Parse();
 
 	if *replicaof != "" {
-		Role = "slave";
+		role = "slave";
 	}
 
     l, err := net.Listen("tcp", "0.0.0.0:"+*port)
@@ -51,6 +56,22 @@ func handleConnection(connection net.Conn) {
     }
 }
 
+func StringWithCharset(length int, charset string) string {
+    b := make([]byte, length)
+    for i := range b {
+        b[i] = charset[seededRand.Intn(len(charset))]
+    }
+    return string(b)
+}
+
+func getHash(length int) string {
+    return StringWithCharset(length, charset)
+}
+
 func GetRole() string {
-	return Role;
+	return role;
+}
+
+func GetReplId() string {
+	return replId;
 }
