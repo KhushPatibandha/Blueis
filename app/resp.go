@@ -12,15 +12,15 @@ import (
 var setGetMap = make(map[string]string);
 var expiryMap = make(map[string]time.Time)
 
-func ParseData(data []byte, connection net.Conn) {
+func ParseData(data []byte, connection net.Conn, server *Server) {
 	if data[0] == '$' {
 		handleBulkStrings(data);
 	} else if data[0] == '*' {
-		handleArray(data, connection);
+		handleArray(data, connection, server);
 	}
 }
 
-func handleArray(data []byte, connection net.Conn) {
+func handleArray(data []byte, connection net.Conn, server *Server) {
 	dataStr := string(data);
 	parts := strings.Split(dataStr, "\r\n");
 	
@@ -80,6 +80,24 @@ func handleArray(data []byte, connection net.Conn) {
 				} else {
 					fmt.Println("Invalid expiry type; use PX for milliseconds or EX for seconds");
 				}
+			
+
+				if server.role == "master" {
+					dataToSendSlave := "*3\r\n$3\r\nset\r\n$" + strconv.Itoa(len(key)) + "\r\n" + key + "\r\n$" + strconv.Itoa(len(value)) + "\r\n" + value + "\r\n" + "$" + strconv.Itoa(len(parts[8])) + "\r\n" + parts[8] + "\r\n" + "$" + strconv.Itoa(len(parts[10])) + "\r\n" + parts[10] + "\r\n";
+					
+					for _, conn := range server.otherServersConn {
+						conn.Write([]byte(dataToSendSlave));
+					}
+				}
+
+			} else {
+				if server.role == "master" {
+					dataToSendSlave := "*3\r\n$3\r\nset\r\n$" + strconv.Itoa(len(key)) + "\r\n" + key + "\r\n$" + strconv.Itoa(len(value)) + "\r\n" + value + "\r\n";
+				
+					for _, conn := range server.otherServersConn {
+						conn.Write([]byte(dataToSendSlave));
+					}
+				}
 			}
 
 			_, err := connection.Write([]byte("+OK\r\n"));
@@ -118,17 +136,16 @@ func handleArray(data []byte, connection net.Conn) {
 		} else if strings.ToLower(parts[2]) == "info" {
 			if strings.ToLower(parts[4]) == "replication" {
 				role := "";
-				replId = GetReplId();
 				replOffset := "0";
 
-				if GetRole() == "slave" {
-					role = "role:slave";
+				if server.role == "slave" {
+					role = "slave";
 				} else {
-					role = "role:master";
+					role = "master";
 				}
 
 				dataToSend := "role:" + role + "\r\n" +
-							"master_replid:" + replId + "\r\n" +
+							"master_replid:" + server.replId + "\r\n" +
 							"master_repl_offset:" + replOffset + "\r\n"
 
 				respToSend := "$" + strconv.Itoa(len(dataToSend)) + "\r\n" + dataToSend + "\r\n"
@@ -151,7 +168,10 @@ func handleArray(data []byte, connection net.Conn) {
 				}
 			}
 		} else if strings.ToLower(parts[2]) == "psync" && strings.ToLower(parts[4]) == "?" && strings.ToLower(parts[6]) == "-1" {
-			dataToSend := "+FULLRESYNC " + replId + " 0\r\n";
+			
+			server.otherServersConn = append(server.otherServersConn, connection);
+			
+			dataToSend := "+FULLRESYNC " + server.replId + " 0\r\n";
 			_, err := connection.Write([]byte(dataToSend));
 			if err != nil {
 				fmt.Println("Error writing:", err.Error());
