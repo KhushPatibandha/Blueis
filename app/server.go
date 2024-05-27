@@ -131,7 +131,15 @@ func handleConnection(conn net.Conn, server *Server) {
         command := strings.Split(string(buf), "*");
 
         for i := 1; i < len(command); i++ {
-            command[i] = "*" + command[i];
+            if command[i] == "" || command[i] == "\r\n" {
+                continue
+            }
+        
+            if strings.ToLower(command[i]) == "3\r\n$8\r\nreplconf\r\n$6\r\ngetack\r\n$1\r\n" {
+                command[i] = "*" + command[i] + "*\r\n";
+            } else {
+                command[i] = "*" + command[i];
+            }
             ParseData([]byte(command[i]), conn, server);
         }
             

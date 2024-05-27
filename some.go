@@ -36,6 +36,7 @@ func main() {
 	// "*2\r\n$4\r\nINFO\r\n$11\r\nreplication\r\n"
 	// *3\r\n$8\r\nREPLCONF\r\n$14\r\nlistening-port\r\n$4\r\n6380\r\n
 	// *3\r\n$8\r\nREPLCONF\r\n$4\r\ncapa\r\n$6\r\npsync2\r\n
+	// *3\r\n$8\r\nreplconf\r\n$6\r\ngetack\r\n$1\r\n*\r\n
 	// *3\r\n$5\r\nPSYNC\r\n$1\r\n?\r\n$2\r\n-1\r\n
 
 	// data := []byte("*2\r\n$4\r\nECHO\r\n$3\r\nhey\r\n");
@@ -46,17 +47,26 @@ func main() {
 	// data := []byte("*2\r\n$4\r\nINFO\r\n$11\r\nreplication\r\n");
 	// data := []byte("*3\r\n$8\r\nREPLCONF\r\n$14\r\nlistening-port\r\n$4\r\n6380\r\n");
 	// data := []byte("*3\r\n$8\r\nREPLCONF\r\n$4\r\ncapa\r\n$6\r\npsync2\r\n");
+
 	// data := []byte("*3\r\n$5\r\nPSYNC\r\n$1\r\n?\r\n$2\r\n-1\r\n");
 
 	// data := []byte("*3\r\n$3\r\nSET\r\n$3\r\nfoo\r\n$3\r\nbar\r\n*3\r\n$3\r\nSET\r\n$3\r\nbar\r\n$3\r\nbaz\r\n*3\r\n$3\r\nSET\r\n$3\r\nbaz\r\n$3\r\nfoo\r\n");
 
-	data := []byte("*5\r\n$3\r\nSET\r\n$3\r\nfoo\r\n$3\r\nbar\r\n$2\r\nPX\r\n$3\r\n100\r\n*2\r\n$3\r\nGET\r\n$3\r\nfoo\r\n");
+	// data := []byte("*5\r\n$3\r\nSET\r\n$3\r\nfoo\r\n$3\r\nbar\r\n$2\r\nPX\r\n$3\r\n100\r\n*2\r\n$3\r\nGET\r\n$3\r\nfoo\r\n");
+	
+	data := []byte("*3\r\n$8\r\nreplconf\r\n$6\r\ngetack\r\n$1\r\n*\r\n");
+
 
 	command := strings.Split(string(data), "*");
 
 	for i := 1; i < len(command); i++ {
-		command[i] = "*" + command[i];
-		time.Sleep(1 * time.Second);
+		if command[i] == "3\r\n$8\r\nreplconf\r\n$6\r\ngetack\r\n$1\r\n" {
+			command[i] = "*" + command[i] + "*\r\n";
+		} else if command[i] == "\r\n" {
+			continue;
+		} else {
+			command[i] = "*" + command[i];
+		}
 		handleArray([]byte(command[i]))
 	}
 
