@@ -188,8 +188,6 @@ func handleArray(data []byte, connection net.Conn, server *Server) {
 				}
 			} else if strings.ToLower(parts[4]) == "getack" && strings.ToLower(parts[6]) == "*" {
 				serverOffset := server.offset;
-				fmt.Println(data)
-				fmt.Println("data length: ", len(data));
 				respToSend := "*3\r\n$8\r\nREPLCONF\r\n$3\r\nACK\r\n$" + strconv.Itoa(len(strconv.Itoa(serverOffset))) + "\r\n" + strconv.Itoa(serverOffset) + "\r\n"
 				_, err := connection.Write([]byte(respToSend))
 				if err != nil {
