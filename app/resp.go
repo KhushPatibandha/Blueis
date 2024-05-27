@@ -21,9 +21,15 @@ func ParseData(data []byte, connection net.Conn, server *Server) {
 }
 
 func handleArray(data []byte, connection net.Conn, server *Server) {
+	fmt.Println("data length: ", len(data));
 	dataStr := string(data);
+	fmt.Println("dataStr: ", dataStr);
+	fmt.Println("dataStr length: ", len(dataStr));
 	parts := strings.Split(dataStr, "\r\n");
 	parts = parts[:len(parts) - 1];
+	if len(parts) == 1 && parts[0] == "*" {
+		return;
+	}
 	fmt.Println("parts: ", parts);
 	numberOfElements, _ := strconv.Atoi(strings.Split(parts[0], "*")[1]);
 	actualNumberOfElements := (len(parts)) / 2;
@@ -41,6 +47,14 @@ func handleArray(data []byte, connection net.Conn, server *Server) {
         }
 
 		if strings.ToLower(actualWord) == "ping" {
+			server.offset += 14;
+
+			for _, conn := range server.otherServersConn {
+				if conn == connection {
+					// dont return pong but still add to the offset
+					return;
+				}
+			}
 			_, err := connection.Write([]byte("+PONG\r\n"));
 			if err != nil {
 				fmt.Println("Error writing:", err.Error());
@@ -62,6 +76,8 @@ func handleArray(data []byte, connection net.Conn, server *Server) {
 				fmt.Println("Error writing:", err.Error());
 			}
 		} else if strings.ToLower(parts[2]) == "set" {
+			
+			server.offset += len(dataStr);
 			
 			key	:= parts[4];
 			value := parts[6];
@@ -101,6 +117,12 @@ func handleArray(data []byte, connection net.Conn, server *Server) {
 				}
 			}
 
+			for _, conn := range server.otherServersConn {
+				if conn == connection {
+					// dont return ok but still add to the offset
+					return;
+				}
+			}
 			_, err := connection.Write([]byte("+OK\r\n"));
 			if err != nil {
 				fmt.Println("Error writing:", err.Error());
@@ -168,11 +190,15 @@ func handleArray(data []byte, connection net.Conn, server *Server) {
 					fmt.Println("Error writing:", err.Error());
 				}
 			} else if strings.ToLower(parts[4]) == "getack" && strings.ToLower(parts[6]) == "*" {
-				respToSend := "*3\r\n$8\r\nREPLCONF\r\n$3\r\nACK\r\n$1\r\n0\r\n"
+				serverOffset := server.offset;
+				fmt.Println(data)
+				fmt.Println("data length: ", len(data));
+				respToSend := "*3\r\n$8\r\nREPLCONF\r\n$3\r\nACK\r\n$" + strconv.Itoa(len(strconv.Itoa(serverOffset))) + "\r\n" + strconv.Itoa(serverOffset) + "\r\n"
 				_, err := connection.Write([]byte(respToSend))
 				if err != nil {
 					fmt.Println("Error writing:", err.Error())
 				}
+				server.offset += len(dataStr);
 			}
 		} else if strings.ToLower(parts[2]) == "psync" && strings.ToLower(parts[4]) == "?" && strings.ToLower(parts[6]) == "-1" {
 			

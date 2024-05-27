@@ -17,6 +17,7 @@ type Server struct {
     role                string
     port                int
     replId              string
+    offset              int
     otherServersConn    []net.Conn
 }
 
@@ -49,7 +50,7 @@ func main() {
         } else {
             conn.Close();
             masterReplId := getHash(40);
-            masterServer := Server{role: "master", port: masterPortInt, replId: masterReplId}
+            masterServer := Server{role: "master", port: masterPortInt, replId: masterReplId, offset: 0}
             wg.Add(1);
             go func()  {
                 spawnServer(&masterServer);
@@ -58,7 +59,7 @@ func main() {
         }
 
         slaveReplId := getHash(40);
-        slaveServer := Server{role: "slave", port: portInt, replId: slaveReplId}
+        slaveServer := Server{role: "slave", port: portInt, replId: slaveReplId, offset: 0}
 
         wg.Add(1);
         go func() {
@@ -67,7 +68,7 @@ func main() {
         }();
     } else if *port != "" && *replicaof == "" {
         masterReplId := getHash(40);
-        masterServer := Server{role: "master", port: portInt, replId: masterReplId}
+        masterServer := Server{role: "master", port: portInt, replId: masterReplId, offset: 0}
 
         wg.Add(1);
         go func() {
@@ -77,7 +78,7 @@ func main() {
         
     } else {
         masterReplId := getHash(40);
-        masterServer := Server{role: "master", port: portInt, replId: masterReplId}
+        masterServer := Server{role: "master", port: portInt, replId: masterReplId, offset: 0}
         
         wg.Add(1);
         go func() {
@@ -116,7 +117,7 @@ func handleConnection(conn net.Conn, server *Server) {
     for {
         buf := make([]byte, 1024);
 
-        _, err := conn.Read(buf);
+        bytesRead, err := conn.Read(buf);
         if err != nil {
             if err == io.EOF {
                 return;
@@ -124,23 +125,24 @@ func handleConnection(conn net.Conn, server *Server) {
             fmt.Println("Error reading:", err.Error());
         }
 
-        if strings.Contains(string(buf), "*3\r\n$5\r\nPSYNC\r\n$1\r\n?\r\n$2\r\n-1\r\n") {
+        data := buf[:bytesRead];
+        if strings.Contains(string(data), "*3\r\n$5\r\nPSYNC\r\n$1\r\n?\r\n$2\r\n-1\r\n") {
             server.otherServersConn = append(server.otherServersConn, conn);
         }
 
-        command := strings.Split(string(buf), "*");
+        command := strings.Split(string(data), "*");
 
         for i := 1; i < len(command); i++ {
-            if command[i] == "" || command[i] == "\r\n" {
+            if strings.TrimSpace(command[i]) == "" {
                 continue
             }
-        
+
             if strings.ToLower(command[i]) == "3\r\n$8\r\nreplconf\r\n$6\r\ngetack\r\n$1\r\n" {
-                command[i] = "*" + command[i] + "*\r\n";
+                command[i] = "*" + command[i] + "*\r\n"
             } else {
-                command[i] = "*" + command[i];
+                command[i] = "*" + command[i]
             }
-            ParseData([]byte(command[i]), conn, server);
+            ParseData([]byte(command[i]), conn, server)
         }
             
     }
