@@ -38,9 +38,10 @@ func main() {
 	// *3\r\n$8\r\nREPLCONF\r\n$4\r\ncapa\r\n$6\r\npsync2\r\n
 	// *3\r\n$8\r\nreplconf\r\n$6\r\ngetack\r\n$1\r\n*\r\n
 	// *3\r\n$5\r\nPSYNC\r\n$1\r\n?\r\n$2\r\n-1\r\n
+	// *3\r\n$4\r\nWAIT\r\n$1\r\n0\r\n$5\r\n60000\r\n
 
 	// data := []byte("*2\r\n$4\r\nECHO\r\n$3\r\nhey\r\n");
-	data := []byte("*1\r\n$4\r\nPING\r\n");
+	// data := []byte("*1\r\n$4\r\nPING\r\n");
 	// data := []byte("*3\r\n$3\r\nSET\r\n$3\r\nfoo\r\n$3\r\nbar\r\n");
 	// data := []byte("*2\r\n$3\r\nGET\r\n$3\r\nfoo\r\n");
 	// data := []byte("*5\r\n$3\r\nSET\r\n$3\r\nfoo\r\n$3\r\nbar\r\n$2\r\nPX\r\n$3\r\n100\r\n");
@@ -57,8 +58,9 @@ func main() {
 	// data := []byte("*3\r\n$8\r\nreplconf\r\n$6\r\ngetack\r\n$1\r\n*\r\n");
 	// data := []byte("*3\r\n$3\r\nSET\r\n$5\r\ngrape\r\n$9\r\nblueberry\r\n");
 	// data := []byte("*3\r\n$3\r\nSET\r\n$5\r\ngrape\r\n$9\r\npineapple\r\n");
-	fmt.Println(len(data) + 37)
-
+	// fmt.Println(len(data) + 37)
+	
+	data := []byte("*3\r\n$4\r\nWAIT\r\n$1\r\n0\r\n$5\r\n60000\r\n");
 
 	command := strings.Split(string(data), "*");
 	// fmt.Println(command);

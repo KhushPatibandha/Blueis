@@ -21,10 +21,7 @@ func ParseData(data []byte, connection net.Conn, server *Server) {
 }
 
 func handleArray(data []byte, connection net.Conn, server *Server) {
-	fmt.Println("data length: ", len(data));
 	dataStr := string(data);
-	fmt.Println("dataStr: ", dataStr);
-	fmt.Println("dataStr length: ", len(dataStr));
 	parts := strings.Split(dataStr, "\r\n");
 	parts = parts[:len(parts) - 1];
 	if len(parts) == 1 && parts[0] == "*" {
@@ -214,6 +211,12 @@ func handleArray(data []byte, connection net.Conn, server *Server) {
 			dataToSend = "$" + strconv.Itoa(len(rdbBytes)) + "\r\n" + string(rdbBytes);
 			_, err2 := connection.Write([]byte(dataToSend));
 			if err2 != nil {
+				fmt.Println("Error writing:", err.Error());
+			}
+		} else if strings.ToLower(parts[2]) == "wait" {
+			dataToSend := ":0\r\n";
+			_, err := connection.Write([]byte(dataToSend));
+			if err != nil {
 				fmt.Println("Error writing:", err.Error());
 			}
 		}
