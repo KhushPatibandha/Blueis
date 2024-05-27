@@ -212,7 +212,8 @@ func handleArray(data []byte, connection net.Conn, server *Server) {
 				fmt.Println("Error writing:", err.Error());
 			}
 		} else if strings.ToLower(parts[2]) == "wait" {
-			dataToSend := ":0\r\n";
+			replicaCount := len(server.otherServersConn);
+			dataToSend := ":" + strconv.Itoa(replicaCount) + "\r\n";
 			_, err := connection.Write([]byte(dataToSend));
 			if err != nil {
 				fmt.Println("Error writing:", err.Error());
