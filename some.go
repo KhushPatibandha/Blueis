@@ -46,9 +46,21 @@ func main() {
 	// data := []byte("*2\r\n$4\r\nINFO\r\n$11\r\nreplication\r\n");
 	// data := []byte("*3\r\n$8\r\nREPLCONF\r\n$14\r\nlistening-port\r\n$4\r\n6380\r\n");
 	// data := []byte("*3\r\n$8\r\nREPLCONF\r\n$4\r\ncapa\r\n$6\r\npsync2\r\n");
-	data := []byte("*3\r\n$5\r\nPSYNC\r\n$1\r\n?\r\n$2\r\n-1\r\n");
+	// data := []byte("*3\r\n$5\r\nPSYNC\r\n$1\r\n?\r\n$2\r\n-1\r\n");
 
-	handleArray(data);
+	// data := []byte("*3\r\n$3\r\nSET\r\n$3\r\nfoo\r\n$3\r\nbar\r\n*3\r\n$3\r\nSET\r\n$3\r\nbar\r\n$3\r\nbaz\r\n*3\r\n$3\r\nSET\r\n$3\r\nbaz\r\n$3\r\nfoo\r\n");
+
+	data := []byte("*5\r\n$3\r\nSET\r\n$3\r\nfoo\r\n$3\r\nbar\r\n$2\r\nPX\r\n$3\r\n100\r\n*2\r\n$3\r\nGET\r\n$3\r\nfoo\r\n");
+
+	command := strings.Split(string(data), "*");
+
+	for i := 1; i < len(command); i++ {
+		command[i] = "*" + command[i];
+		time.Sleep(1 * time.Second);
+		handleArray([]byte(command[i]))
+	}
+
+	// handleArray(data);
 
 	// fmt.Println(s);
 	// fmt.Println(len(s));
@@ -57,12 +69,13 @@ func main() {
 func handleArray(data []byte) {
 	dataStr := string(data);
 	parts := strings.Split(dataStr, "\r\n");
+	parts = parts[:len(parts) - 1];
 	fmt.Println(parts);
 	fmt.Println("parts length: ", len(parts));
 	
 	numberOfElements, _ := strconv.Atoi(strings.Split(parts[0], "*")[1]);
 	fmt.Println("Number of elements: ", numberOfElements);
-	actualNumberOfElements := (len(parts) - 1) / 2;
+	actualNumberOfElements := (len(parts)) / 2;
 	fmt.Println("Actual number of elements: ", actualNumberOfElements);
 
 	if numberOfElements != actualNumberOfElements {
@@ -85,7 +98,7 @@ func handleArray(data []byte) {
 			fmt.Println("+PONG");
 		}
 	} else {
-		for i := 1; i < len(parts) - 1; i += 2 {
+		for i := 1; i < len(parts); i += 2 {
 			wordLen, _ := strconv.Atoi(strings.Split(parts[i], "$")[1]);
 			actualWordLen := len(parts[i+1]);
 			fmt.Println(actualWordLen);

@@ -23,9 +23,9 @@ func ParseData(data []byte, connection net.Conn, server *Server) {
 func handleArray(data []byte, connection net.Conn, server *Server) {
 	dataStr := string(data);
 	parts := strings.Split(dataStr, "\r\n");
-	
+	parts = parts[:len(parts) - 1];
 	numberOfElements, _ := strconv.Atoi(strings.Split(parts[0], "*")[1]);
-	actualNumberOfElements := (len(parts) - 1) / 2;
+	actualNumberOfElements := (len(parts)) / 2;
 
 	if numberOfElements != actualNumberOfElements {
         fmt.Println("Error: Number of elements does not match")
@@ -46,7 +46,7 @@ func handleArray(data []byte, connection net.Conn, server *Server) {
 			}
 		}
 	} else {
-		for i := 1; i < len(parts) - 1; i += 2 {
+		for i := 1; i < len(parts); i += 2 {
 			wordLen, _ := strconv.Atoi(strings.Split(parts[i], "$")[1]);
 			actualWordLen := len(parts[i+1]);
 			if wordLen != actualWordLen {
@@ -67,7 +67,7 @@ func handleArray(data []byte, connection net.Conn, server *Server) {
 
 			setGetMap[key] = value;
 
-			if len(parts) == 12 {
+			if len(parts) == 11 {
 				expiry, err := strconv.Atoi(parts[10]);
 				if err != nil {
 					fmt.Println("Error converting expiry to int, may be enter valid expiry?");
@@ -168,8 +168,6 @@ func handleArray(data []byte, connection net.Conn, server *Server) {
 				}
 			}
 		} else if strings.ToLower(parts[2]) == "psync" && strings.ToLower(parts[4]) == "?" && strings.ToLower(parts[6]) == "-1" {
-			
-			server.otherServersConn = append(server.otherServersConn, connection);
 			
 			dataToSend := "+FULLRESYNC " + server.replId + " 0\r\n";
 			_, err := connection.Write([]byte(dataToSend));

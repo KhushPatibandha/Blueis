@@ -42,13 +42,14 @@ func main() {
         _, masterPort := splitHostPort(*replicaof);
         masterPortInt, _ := strconv.Atoi(masterPort);
         masterPortGlobal = masterPortInt;
-        masterReplId := getHash(40);
-        masterServer := Server{role: "master", port: masterPortInt, replId: masterReplId}
 
-        _, err := net.Listen("tcp", "localhost:"+masterPort);
+        conn, err := net.Listen("tcp", "localhost:"+masterPort);
         if err != nil {
-            fmt.Println("Master server is already running on port: ", masterServer.port);
+            fmt.Println("Master server is already running on port: ", masterPort);
         } else {
+            conn.Close();
+            masterReplId := getHash(40);
+            masterServer := Server{role: "master", port: masterPortInt, replId: masterReplId}
             wg.Add(1);
             go func()  {
                 spawnServer(&masterServer);
@@ -98,6 +99,7 @@ func spawnServer(server *Server) {
     if server.role == "slave" {
         masterConn := connectToMaster(server);
         performHandShake(masterConn, server);
+        go handleConnection(masterConn, server);
     }
 
     for {
@@ -122,13 +124,23 @@ func handleConnection(conn net.Conn, server *Server) {
             fmt.Println("Error reading:", err.Error());
         }
 
-        ParseData(buf, conn, server);
+        if strings.Contains(string(buf), "*3\r\n$5\r\nPSYNC\r\n$1\r\n?\r\n$2\r\n-1\r\n") {
+            server.otherServersConn = append(server.otherServersConn, conn);
+        }
+
+        command := strings.Split(string(buf), "*");
+
+        for i := 1; i < len(command); i++ {
+            command[i] = "*" + command[i];
+            ParseData([]byte(command[i]), conn, server);
+        }
+            
     }
 }
 
 func connectToMaster(server *Server) net.Conn {
     conn, err := net.Dial("tcp", "localhost:" + strconv.Itoa(masterPortGlobal));
-    fmt.Println("Connected to master server: ", conn);
+    fmt.Println("Connected to master server: ", conn.RemoteAddr(), &conn);
 
     if err != nil {
         fmt.Println("Failed to connect to master", masterPortGlobal);
@@ -164,7 +176,7 @@ func performHandShake(conn net.Conn, server *Server) {
         if err != nil {
             fmt.Println("Error reading:", err.Error());
         }
-        fmt.Println("Handshake response:", string(buf));
+        // fmt.Println("Handshake response:", string(buf));
     }
 }
 
