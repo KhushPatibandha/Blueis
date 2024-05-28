@@ -23,6 +23,7 @@ import (
 
 var setGetMap = make(map[string]string);
 var expiryMap = make(map[string]time.Time)
+var streamMap = make(map[string]map[string]string)
 
 func ParseData(data []byte, connection net.Conn, server *Server) {
 	if data[0] == '$' {
@@ -278,7 +279,16 @@ func handleArray(data []byte, connection net.Conn, server *Server) {
 				}
 			}
 		} else if strings.ToLower(parts[2]) == "type" {
-			_, ok := setGetMap[parts[4]];
+
+			_, ok := streamMap[parts[4]];
+			if ok {
+				_, err := connection.Write([]byte("+stream\r\n"));
+				if err != nil {
+					fmt.Println("Error writing:", err.Error());
+				}
+			}
+
+			_, ok = setGetMap[parts[4]];
 			if ok {
 				expiry, ok := expiryMap[parts[4]];
 
@@ -304,7 +314,57 @@ func handleArray(data []byte, connection net.Conn, server *Server) {
 					fmt.Println("Error writing:", err.Error());
 				}
 			}
-		} 
+		} else if strings.ToLower(parts[2]) == "xadd" {
+			streamKey := parts[4];
+			streamKeysId := parts[6];
+
+			keyValues := parts[7:];
+			if len(keyValues) % 2 != 0 {
+				fmt.Println("Error: Invalid number of key value pairs");
+				return;
+			}
+			
+			_, ok := streamMap[streamKey];
+			if !ok {
+				// create a new stream key and add all the entries
+				streamMap[streamKey] = make(map[string]string);
+				streamMap[streamKey]["id"] = streamKeysId;
+
+				for i := 0; i < len(keyValues); i += 4 {
+					key := keyValues[i + 1];
+					value := keyValues[i + 3];
+
+					streamMap[streamKey][key] = value;
+				}
+			} else {
+				// first check if user want to insert in some id
+				_, ok := streamMap[streamKey]["id"];
+
+				// if that id already exist then insert key value in that id
+				// if not, then create the id in the stream key and insert key value in that id
+				if ok {
+					for i := 0; i < len(keyValues); i += 4 {
+						key := keyValues[i + 1];
+						value := keyValues[i + 3];
+	
+						streamMap[streamKey][key] = value;
+					}
+				} else {
+					streamMap[streamKey]["id"] = streamKeysId;
+					for i := 0; i < len(keyValues); i += 4 {
+						key := keyValues[i + 1];
+						value := keyValues[i + 3];
+	
+						streamMap[streamKey][key] = value;
+					}
+				}
+			}
+			dataToSend := "$" + strconv.Itoa(len(streamKeysId)) + "\r\n" + streamKeysId + "\r\n";
+			_, err := connection.Write([]byte(dataToSend));
+			if err != nil {
+				fmt.Println("Error writing:", err.Error());
+			}
+		}
 		// else if strings.ToLower(parts[2]) == "keys" {
 		// 	if strings.ToLower(parts[4]) == "*" {
 		// 		filePath := Dir + "/" + Dbfilename;
