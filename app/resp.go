@@ -161,6 +161,15 @@ func handleArray(data []byte, connection net.Conn, server *Server) {
 					fmt.Println("Error writing:", err.Error());
 				}
 			} else {
+				key, value := readFile(Dir + "/" + Dbfilename);
+				if key == parts[4] {
+					dataToSend := "$" + strconv.Itoa(len(value)) + "\r\n" + value + "\r\n";
+					_, err := connection.Write([]byte(dataToSend));
+					if err != nil {
+						fmt.Println("Error writing:", err.Error());
+					}
+					return;	
+				}
 				_, err := connection.Write([]byte("$-1\r\n"));
 				if err != nil {
 					fmt.Println("Error writing:", err.Error());
@@ -273,9 +282,9 @@ func handleArray(data []byte, connection net.Conn, server *Server) {
 			if strings.ToLower(parts[4]) == "*" {
 				filePath := Dir + "/" + Dbfilename;
 
-				content := readFile(filePath);
+				key, _ := readFile(filePath);
 
-				dataToSend := "*1\r\n$" + strconv.Itoa(len(content)) + "\r\n" + content + "\r\n";
+				dataToSend := "*1\r\n$" + strconv.Itoa(len(key)) + "\r\n" + key + "\r\n";
 				_, err := connection.Write([]byte(dataToSend));
 				if err != nil {
 					fmt.Println("Error writing:", err.Error());
@@ -304,11 +313,15 @@ func parseTable(bytes []byte) []byte {
 	end := sliceIndex(bytes, opCodeEOF)
 	return bytes[start+1 : end]
 }
-func readFile(path string) string {
+func readFile(path string) (string, string) {
 	c, _ := os.ReadFile(path)
 	key := parseTable(c)
+	if key == nil {
+		return "", "";
+	}
 	str := key[4 : 4+key[3]]
-	return string(str)
+	value := key[4+key[3]+1 : 4+key[3]+1+key[4+key[3]]]
+	return string(str), string(value);
 }
 
 // RESP data type		Minimal protocol version	Category	First byte

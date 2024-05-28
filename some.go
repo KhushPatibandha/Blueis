@@ -57,7 +57,7 @@ func main() {
 	// data := []byte("*2\r\n$4\r\nECHO\r\n$3\r\nhey\r\n");
 	// data := []byte("*1\r\n$4\r\nPING\r\n");
 	// data := []byte("*3\r\n$3\r\nSET\r\n$3\r\nfoo\r\n$3\r\nbar\r\n");
-	// data := []byte("*2\r\n$3\r\nGET\r\n$3\r\nfoo\r\n");
+	data := []byte("*2\r\n$3\r\nGET\r\n$3\r\nfoo\r\n");
 	// data := []byte("*5\r\n$3\r\nSET\r\n$3\r\nfoo\r\n$3\r\nbar\r\n$2\r\nPX\r\n$3\r\n100\r\n");
 	// data := []byte("*2\r\n$4\r\nINFO\r\n$11\r\nreplication\r\n");
 	// data := []byte("*3\r\n$8\r\nREPLCONF\r\n$14\r\nlistening-port\r\n$4\r\n6380\r\n");
@@ -75,7 +75,7 @@ func main() {
 	// fmt.Println(len(data) + 37)
 	
 	// data := []byte("*3\r\n$4\r\nWAIT\r\n$1\r\n0\r\n$5\r\n60000\r\n");
-	data := []byte("*2\r\n$4\r\nkeys\r\n$1\r\n*\r\n");
+	// data := []byte("*2\r\n$4\r\nkeys\r\n$1\r\n*\r\n");
 
 	command := strings.Split(string(data), "*");
 	// fmt.Println(command);
@@ -218,6 +218,13 @@ func handleArray(data []byte) {
 				
 				fmt.Println(dataToSend);
 			} else {
+
+				key, value := readFile("../../dump.rdb");
+				if key == parts[4] {
+					dataToSend := "$" + strconv.Itoa(len(value)) + "\r\n" + value + "\r\n";
+					fmt.Println(dataToSend)
+					return;	
+				}
 				// _, err := connection.Write([]byte("$-1\r\n"));
 				// if err != nil {
 				// 	fmt.Println("Error writing:", err.Error());
@@ -245,8 +252,9 @@ func handleArray(data []byte) {
 			if strings.ToLower(parts[4]) == "*" {
 				filePath := "../../dump.rdb";
 
-				fileContent := readFile(filePath);
+				fileContent, value := readFile(filePath);
 				fmt.Println(fileContent)
+				fmt.Println(value)
 			}
 		}
     }
@@ -265,9 +273,13 @@ func parseTable(bytes []byte) []byte {
 	end := sliceIndex(bytes, opCodeEOF)
 	return bytes[start+1 : end]
 }
-func readFile(path string) string {
+func readFile(path string) (string, string) {
 	c, _ := os.ReadFile(path)
 	key := parseTable(c)
+	if key == nil {
+		return "", "";
+	}
 	str := key[4 : 4+key[3]]
-	return string(str)
+	value := key[4+key[3]+1 : 4+key[3]+1+key[4+key[3]]]
+	return string(str), string(value)
 }
