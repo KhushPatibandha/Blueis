@@ -240,6 +240,22 @@ func handleArray(data []byte, connection net.Conn, server *Server) {
 				fmt.Println("Error writing:", err.Error());
 			}
 			AckCount = 0;
+		} else if strings.ToLower(parts[2]) == "config" {
+			if strings.ToLower(parts[4]) == "get" {
+				if strings.ToLower(parts[6]) == "dir" {
+					dataToSend := "*2\r\n$3\r\ndir\r\n$" + strconv.Itoa(len(Dir)) + "\r\n" + Dir + "\r\n";
+					_, err := connection.Write([]byte(dataToSend));
+					if err != nil {
+						fmt.Println("Error writing:", err.Error());
+					}
+				} else if strings.ToLower(parts[6]) == "dbfilename" {
+					dataToSend := "*2\r\n$10\r\ndbfilename\r\n$" + strconv.Itoa(len(Dbfilename)) + "\r\n" + Dbfilename + "\r\n";
+					_, err := connection.Write([]byte(dataToSend));
+					if err != nil {
+						fmt.Println("Error writing:", err.Error());
+					}
+				}
+			}
 		}
     }
 }

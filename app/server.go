@@ -25,6 +25,8 @@ var AckCount = 0;
 var masterPortGlobal int;
 const charset = "abcdefghijklmnopqrstuvwxyz" + "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 var seededRand *rand.Rand = rand.New(rand.NewSource(time.Now().UnixNano()))
+var Dir = "";
+var Dbfilename = "";
 
 func main() {
     // .spwan_redis_server.sh --port 6380 --replicaof "localhost 6379"
@@ -33,7 +35,12 @@ func main() {
     
     port := flag.String("port", "6379", "port to listen on");
     replicaof := flag.String("replicaof", "", "master server to replicate from");
+    dir := flag.String("dir", "", "directory to save data");
+    dbfilename := flag.String("dbfilename", "", "filename to save data");
     flag.Parse();
+
+    Dir = *dir;
+    Dbfilename = *dbfilename;
 
     // fmt.Println("Port:", *port);
     // fmt.Println("Replicaof:", *replicaof);
