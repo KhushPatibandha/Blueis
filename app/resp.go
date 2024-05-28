@@ -318,6 +318,21 @@ func handleArray(data []byte, connection net.Conn, server *Server) {
 			streamKey := parts[4];
 			streamKeysId := parts[6];
 
+			idParts := strings.Split(streamKeysId, "-");
+			if len(idParts) != 2 {
+				_, err := connection.Write([]byte("-ERR The ID specified in XADD is equal or smaller than the target stream top item\r\n"));
+				if err != nil {
+					fmt.Println("Error writing:", err.Error());
+				}
+				return;
+			} else if idParts[0] == "0" && idParts[1] == "0" {
+				_, err := connection.Write([]byte("-ERR The ID specified in XADD must be greater than 0-0\r\n"));
+				if err != nil {
+					fmt.Println("Error writing:", err.Error());
+				}
+				return;
+			}
+
 			keyValues := parts[7:];
 			if len(keyValues) % 2 != 0 {
 				fmt.Println("Error: Invalid number of key value pairs");
@@ -337,26 +352,43 @@ func handleArray(data []byte, connection net.Conn, server *Server) {
 					streamMap[streamKey][key] = value;
 				}
 			} else {
-				// first check if user want to insert in some id
-				_, ok := streamMap[streamKey]["id"];
+				// check for id
+				highestmili := "-1";
+				highestSeq := "-1";
+				for _, innerIdMap := range streamMap {
+					if id, ok := innerIdMap["id"]; ok {
+						idParts := strings.Split(id, "-");
+						if idParts[0] > highestmili {
+							highestmili = idParts[0];
+						}
+						if idParts[1] > highestSeq {
+							highestSeq = idParts[1];
+						}
+					}
+				}
 
-				// if that id already exist then insert key value in that id
-				// if not, then create the id in the stream key and insert key value in that id
-				if ok {
-					for i := 0; i < len(keyValues); i += 4 {
-						key := keyValues[i + 1];
-						value := keyValues[i + 3];
-	
-						streamMap[streamKey][key] = value;
+				if idParts[0] >= highestmili {
+					if idParts[1] <= highestSeq {
+						_, err := connection.Write([]byte("-ERR The ID specified in XADD is equal or smaller than the target stream top item\r\n"));
+						if err != nil {
+							fmt.Println("Error writing:", err.Error());
+						}
+						return;
 					}
 				} else {
-					streamMap[streamKey]["id"] = streamKeysId;
-					for i := 0; i < len(keyValues); i += 4 {
-						key := keyValues[i + 1];
-						value := keyValues[i + 3];
-	
-						streamMap[streamKey][key] = value;
+					_, err := connection.Write([]byte("-ERR The ID specified in XADD is equal or smaller than the target stream top item\r\n"));
+					if err != nil {
+						fmt.Println("Error writing:", err.Error());
 					}
+					return;
+				}
+
+				streamMap[streamKey]["id"] = streamKeysId;
+				for i := 0; i < len(keyValues); i += 4 {
+					key := keyValues[i + 1];
+					value := keyValues[i + 3];
+	
+					streamMap[streamKey][key] = value;
 				}
 			}
 			dataToSend := "$" + strconv.Itoa(len(streamKeysId)) + "\r\n" + streamKeysId + "\r\n";
