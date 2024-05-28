@@ -4,23 +4,22 @@ import (
 	"encoding/hex"
 	"fmt"
 	"net"
-	"os"
 	"strconv"
 	"strings"
 	"time"
 )
 
-const (
-	opCodeModuleAux    byte = 247 /* Module auxiliary data. */
-	opCodeIdle         byte = 248 /* LRU idle time. */
-	opCodeFreq         byte = 249 /* LFU frequency. */
-	opCodeAux          byte = 250 /* RDB aux field. */
-	opCodeResizeDB     byte = 251 /* Hash table resize hint. */
-	opCodeExpireTimeMs byte = 252 /* Expire time in milliseconds. */
-	opCodeExpireTime   byte = 253 /* Old expire time in seconds. */
-	opCodeSelectDB     byte = 254 /* DB number of the following keys. */
-	opCodeEOF          byte = 255
-)
+// const (
+// 	opCodeModuleAux    byte = 247 /* Module auxiliary data. */
+// 	opCodeIdle         byte = 248 /* LRU idle time. */
+// 	opCodeFreq         byte = 249 /* LFU frequency. */
+// 	opCodeAux          byte = 250 /* RDB aux field. */
+// 	opCodeResizeDB     byte = 251 /* Hash table resize hint. */
+// 	opCodeExpireTimeMs byte = 252 /* Expire time in milliseconds. */
+// 	opCodeExpireTime   byte = 253 /* Old expire time in seconds. */
+// 	opCodeSelectDB     byte = 254 /* DB number of the following keys. */
+// 	opCodeEOF          byte = 255
+// )
 
 var setGetMap = make(map[string]string);
 var expiryMap = make(map[string]time.Time)
@@ -161,15 +160,15 @@ func handleArray(data []byte, connection net.Conn, server *Server) {
 					fmt.Println("Error writing:", err.Error());
 				}
 			} else {
-				key, value := readFile(Dir + "/" + Dbfilename);
-				if key == parts[4] {
-					dataToSend := "$" + strconv.Itoa(len(value)) + "\r\n" + value + "\r\n";
-					_, err := connection.Write([]byte(dataToSend));
-					if err != nil {
-						fmt.Println("Error writing:", err.Error());
-					}
-					return;	
-				}
+				// key, value := readFile(Dir + "/" + Dbfilename);
+				// if key == parts[4] {
+				// 	dataToSend := "$" + strconv.Itoa(len(value)) + "\r\n" + value + "\r\n";
+				// 	_, err := connection.Write([]byte(dataToSend));
+				// 	if err != nil {
+				// 		fmt.Println("Error writing:", err.Error());
+				// 	}
+				// 	return;	
+				// }
 				_, err := connection.Write([]byte("$-1\r\n"));
 				if err != nil {
 					fmt.Println("Error writing:", err.Error());
@@ -278,19 +277,47 @@ func handleArray(data []byte, connection net.Conn, server *Server) {
 					}
 				}
 			}
-		} else if strings.ToLower(parts[2]) == "keys" {
-			if strings.ToLower(parts[4]) == "*" {
-				filePath := Dir + "/" + Dbfilename;
+		} else if strings.ToLower(parts[2]) == "type" {
+			_, ok := setGetMap[parts[4]];
+			if ok {
+				expiry, ok := expiryMap[parts[4]];
 
-				key, _ := readFile(filePath);
+				if ok && time.Now().After(expiry) {
+					delete(setGetMap, parts[4]);
+					delete(expiryMap, parts[4]);
 
-				dataToSend := "*1\r\n$" + strconv.Itoa(len(key)) + "\r\n" + key + "\r\n";
-				_, err := connection.Write([]byte(dataToSend));
+					_, err := connection.Write([]byte("+none\r\n"));
+					if err != nil {
+						fmt.Println("Error writing:", err.Error());
+					}	
+
+					return;
+				}
+
+				_, err := connection.Write([]byte("+string\r\n"));
+				if err != nil {
+					fmt.Println("Error writing:", err.Error());
+				}
+			} else {
+				_, err := connection.Write([]byte("+none\r\n"));
 				if err != nil {
 					fmt.Println("Error writing:", err.Error());
 				}
 			}
-		}
+		} 
+		// else if strings.ToLower(parts[2]) == "keys" {
+		// 	if strings.ToLower(parts[4]) == "*" {
+		// 		filePath := Dir + "/" + Dbfilename;
+
+		// 		key, _ := readFile(filePath);
+
+		// 		dataToSend := "*1\r\n$" + strconv.Itoa(len(key)) + "\r\n" + key + "\r\n";
+		// 		_, err := connection.Write([]byte(dataToSend));
+		// 		if err != nil {
+		// 			fmt.Println("Error writing:", err.Error());
+		// 		}
+		// 	}
+		// }
     }
 }
 
@@ -300,29 +327,29 @@ func handleBulkStrings(date []byte) {
 // -------------------------------------------------------------------
 // @Utility for "KEYS *"
 
-func sliceIndex(data []byte, sep byte) int {
-	for i, b := range data {
-		if b == sep {
-			return i
-		}
-	}
-	return -1
-}
-func parseTable(bytes []byte) []byte {
-	start := sliceIndex(bytes, opCodeResizeDB)
-	end := sliceIndex(bytes, opCodeEOF)
-	return bytes[start+1 : end]
-}
-func readFile(path string) (string, string) {
-	c, _ := os.ReadFile(path)
-	key := parseTable(c)
-	if key == nil {
-		return "", "";
-	}
-	str := key[4 : 4+key[3]]
-	value := key[4+key[3]+1 : 4+key[3]+1+key[4+key[3]]]
-	return string(str), string(value);
-}
+// func sliceIndex(data []byte, sep byte) int {
+// 	for i, b := range data {
+// 		if b == sep {
+// 			return i
+// 		}
+// 	}
+// 	return -1
+// }
+// func parseTable(bytes []byte) []byte {
+// 	start := sliceIndex(bytes, opCodeResizeDB)
+// 	end := sliceIndex(bytes, opCodeEOF)
+// 	return bytes[start+1 : end]
+// }
+// func readFile(path string) (string, string) {
+// 	c, _ := os.ReadFile(path)
+// 	key := parseTable(c)
+// 	if key == nil {
+// 		return "", "";
+// 	}
+// 	str := key[4 : 4+key[3]]
+// 	value := key[4+key[3]+1 : 4+key[3]+1+key[4+key[3]]]
+// 	return string(str), string(value);
+// }
 
 // RESP data type		Minimal protocol version	Category	First byte
 // Simple strings		RESP2						Simple		+
