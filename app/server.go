@@ -21,6 +21,7 @@ type Server struct {
     otherServersConn    []net.Conn
 }
 
+var AckCount = 0;
 var masterPortGlobal int;
 const charset = "abcdefghijklmnopqrstuvwxyz" + "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 var seededRand *rand.Rand = rand.New(rand.NewSource(time.Now().UnixNano()))
@@ -128,6 +129,8 @@ func handleConnection(conn net.Conn, server *Server) {
         data := buf[:bytesRead];
         if strings.Contains(string(data), "*3\r\n$5\r\nPSYNC\r\n$1\r\n?\r\n$2\r\n-1\r\n") {
             server.otherServersConn = append(server.otherServersConn, conn);
+        } else if strings.Contains(string(data), "*3\r\n$8\r\nREPLCONF\r\n$3\r\nACK\r\n$") {
+            AckCount++;
         }
 
         command := strings.Split(string(data), "*");

@@ -212,12 +212,34 @@ func handleArray(data []byte, connection net.Conn, server *Server) {
 				fmt.Println("Error writing:", err.Error());
 			}
 		} else if strings.ToLower(parts[2]) == "wait" {
-			replicaCount := len(server.otherServersConn);
+			replicasToWaitFor := parts[4];
+
+			if replicasToWaitFor == "0" {
+				dataToSend := ":0\r\n";
+				_, err := connection.Write([]byte(dataToSend));
+				if err != nil {
+					fmt.Println("Error writing:", err.Error());
+				}
+			}
+
+			for _, conn := range server.otherServersConn {
+				conn.Write([]byte("*3\r\n$8\r\nreplconf\r\n$6\r\nGETACK\r\n$1\r\n*\r\n"));
+			}
+
+			timeToWait := parts[6];
+			timeToWaitInt, _ := strconv.Atoi(timeToWait);
+			time.Sleep(time.Duration(timeToWaitInt) * time.Millisecond);
+			
+			replicaCount := AckCount;
+			if AckCount == 0 {
+				replicaCount = len(server.otherServersConn);
+			}
 			dataToSend := ":" + strconv.Itoa(replicaCount) + "\r\n";
 			_, err := connection.Write([]byte(dataToSend));
 			if err != nil {
 				fmt.Println("Error writing:", err.Error());
 			}
+			AckCount = 0;
 		}
     }
 }
