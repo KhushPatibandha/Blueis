@@ -147,7 +147,7 @@ func handleConnection(conn net.Conn, server *Server) {
                 continue
             }
 
-            if strings.ToLower(command[i]) == "3\r\n$8\r\nreplconf\r\n$6\r\ngetack\r\n$1\r\n" {
+            if strings.ToLower(command[i]) == "3\r\n$8\r\nreplconf\r\n$6\r\ngetack\r\n$1\r\n" || strings.ToLower(command[i]) == "2\r\n$4\r\nkeys\r\n$1\r\n" {
                 command[i] = "*" + command[i] + "*\r\n"
             } else {
                 command[i] = "*" + command[i]

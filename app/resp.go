@@ -4,9 +4,22 @@ import (
 	"encoding/hex"
 	"fmt"
 	"net"
+	"os"
 	"strconv"
 	"strings"
 	"time"
+)
+
+const (
+	opCodeModuleAux    byte = 247 /* Module auxiliary data. */
+	opCodeIdle         byte = 248 /* LRU idle time. */
+	opCodeFreq         byte = 249 /* LFU frequency. */
+	opCodeAux          byte = 250 /* RDB aux field. */
+	opCodeResizeDB     byte = 251 /* Hash table resize hint. */
+	opCodeExpireTimeMs byte = 252 /* Expire time in milliseconds. */
+	opCodeExpireTime   byte = 253 /* Old expire time in seconds. */
+	opCodeSelectDB     byte = 254 /* DB number of the following keys. */
+	opCodeEOF          byte = 255
 )
 
 var setGetMap = make(map[string]string);
@@ -256,11 +269,46 @@ func handleArray(data []byte, connection net.Conn, server *Server) {
 					}
 				}
 			}
+		} else if strings.ToLower(parts[2]) == "keys" {
+			if strings.ToLower(parts[4]) == "*" {
+				filePath := Dir + "/" + Dbfilename;
+
+				content := readFile(filePath);
+
+				dataToSend := "*1\r\n$" + strconv.Itoa(len(content)) + "\r\n" + content + "\r\n";
+				_, err := connection.Write([]byte(dataToSend));
+				if err != nil {
+					fmt.Println("Error writing:", err.Error());
+				}
+			}
 		}
     }
 }
 
 func handleBulkStrings(date []byte) {
+}
+
+// -------------------------------------------------------------------
+// @Utility for "KEYS *"
+
+func sliceIndex(data []byte, sep byte) int {
+	for i, b := range data {
+		if b == sep {
+			return i
+		}
+	}
+	return -1
+}
+func parseTable(bytes []byte) []byte {
+	start := sliceIndex(bytes, opCodeResizeDB)
+	end := sliceIndex(bytes, opCodeEOF)
+	return bytes[start+1 : end]
+}
+func readFile(path string) string {
+	c, _ := os.ReadFile(path)
+	key := parseTable(c)
+	str := key[4 : 4+key[3]]
+	return string(str)
 }
 
 // RESP data type		Minimal protocol version	Category	First byte

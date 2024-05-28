@@ -3,9 +3,23 @@ package main
 import (
 	"fmt"
 	"math/rand"
+	"os"
 	"strconv"
 	"strings"
 	"time"
+)
+
+
+const (
+	opCodeModuleAux    byte = 247 /* Module auxiliary data. */
+	opCodeIdle         byte = 248 /* LRU idle time. */
+	opCodeFreq         byte = 249 /* LFU frequency. */
+	opCodeAux          byte = 250 /* RDB aux field. */
+	opCodeResizeDB     byte = 251 /* Hash table resize hint. */
+	opCodeExpireTimeMs byte = 252 /* Expire time in milliseconds. */
+	opCodeExpireTime   byte = 253 /* Old expire time in seconds. */
+	opCodeSelectDB     byte = 254 /* DB number of the following keys. */
+	opCodeEOF          byte = 255
 )
 
 var setGetMap = make(map[string]string);
@@ -60,21 +74,24 @@ func main() {
 	// data := []byte("*3\r\n$3\r\nSET\r\n$5\r\ngrape\r\n$9\r\npineapple\r\n");
 	// fmt.Println(len(data) + 37)
 	
-	data := []byte("*3\r\n$4\r\nWAIT\r\n$1\r\n0\r\n$5\r\n60000\r\n");
+	// data := []byte("*3\r\n$4\r\nWAIT\r\n$1\r\n0\r\n$5\r\n60000\r\n");
+	data := []byte("*2\r\n$4\r\nkeys\r\n$1\r\n*\r\n");
 
 	command := strings.Split(string(data), "*");
 	// fmt.Println(command);
 	// fmt.Println(len(command));
 
 	for i := 1; i < len(command); i++ {
-		if command[i] == "3\r\n$8\r\nreplconf\r\n$6\r\ngetack\r\n$1\r\n" {
-			command[i] = "*" + command[i] + "*\r\n";
-		} else if command[i] == "\r\n" {
-			continue;
-		} else {
-			command[i] = "*" + command[i];
+		if strings.TrimSpace(command[i]) == "" {
+			continue
 		}
-		handleArray([]byte(command[i]))
+
+		if strings.ToLower(command[i]) == "3\r\n$8\r\nreplconf\r\n$6\r\ngetack\r\n$1\r\n" || strings.ToLower(command[i]) == "2\r\n$4\r\nkeys\r\n$1\r\n" {
+			command[i] = "*" + command[i] + "*\r\n"
+		} else {
+			command[i] = "*" + command[i]
+		}
+		handleArray([]byte(command[i]));
 	}
 
 	// handleArray(data);
@@ -224,6 +241,33 @@ func handleArray(data []byte) {
 
 				fmt.Println("dataToSend: ", dataToSend);
 			}
+		} else if strings.ToLower(parts[2]) == "keys" {
+			if strings.ToLower(parts[4]) == "*" {
+				filePath := "../../dump.rdb";
+
+				fileContent := readFile(filePath);
+				fmt.Println(fileContent)
+			}
 		}
     }
+}
+
+func sliceIndex(data []byte, sep byte) int {
+	for i, b := range data {
+		if b == sep {
+			return i
+		}
+	}
+	return -1
+}
+func parseTable(bytes []byte) []byte {
+	start := sliceIndex(bytes, opCodeResizeDB)
+	end := sliceIndex(bytes, opCodeEOF)
+	return bytes[start+1 : end]
+}
+func readFile(path string) string {
+	c, _ := os.ReadFile(path)
+	key := parseTable(c)
+	str := key[4 : 4+key[3]]
+	return string(str)
 }
