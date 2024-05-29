@@ -21,9 +21,15 @@ import (
 // 	opCodeEOF          byte = 255
 // )
 
+type StreamEntry struct {
+	ID		string
+	Fields	[]string
+}
+
+var streamData = make(map[string][]StreamEntry);
 var setGetMap = make(map[string]string);
 var expiryMap = make(map[string]time.Time)
-var streamMap = make(map[string]map[string]string)
+
 
 func ParseData(data []byte, connection net.Conn, server *Server) {
 	if data[0] == '$' {
@@ -280,12 +286,13 @@ func handleArray(data []byte, connection net.Conn, server *Server) {
 			}
 		} else if strings.ToLower(parts[2]) == "type" {
 
-			_, ok := streamMap[parts[4]];
+			_, ok := streamData[parts[4]];
 			if ok {
 				_, err := connection.Write([]byte("+stream\r\n"));
 				if err != nil {
 					fmt.Println("Error writing:", err.Error());
 				}
+				return;
 			}
 
 			_, ok = setGetMap[parts[4]];
@@ -308,11 +315,13 @@ func handleArray(data []byte, connection net.Conn, server *Server) {
 				if err != nil {
 					fmt.Println("Error writing:", err.Error());
 				}
+				return;
 			} else {
 				_, err := connection.Write([]byte("+none\r\n"));
 				if err != nil {
 					fmt.Println("Error writing:", err.Error());
 				}
+				return;
 			}
 		} else if strings.ToLower(parts[2]) == "xadd" {
 			streamKey := parts[4];
@@ -326,51 +335,45 @@ func handleArray(data []byte, connection net.Conn, server *Server) {
 					return;
 				}
 
-				_, ok := streamMap[streamKey];
+				_, ok := streamData[streamKey];
 				if !ok {
-					streamMap[streamKey] = make(map[string]string);
 					milisec := time.Now().UnixNano() / int64(time.Millisecond);
 					streamKeysId = strconv.Itoa(int(milisec)) + "-0";
 
-					streamMap[streamKey]["id"] = streamKeysId;
-					
+					var keyValArr []string;
 					for i := 0; i < len(keyValues); i += 4 {
 						key := keyValues[i + 1];
 						value := keyValues[i + 3];
-	
-						streamMap[streamKey][key] = value;
-					}
-				} else {
-					highestMili := "-1";
-					highestMilisSeq := "0";
 
-					for _, innerIdMap := range streamMap {
-						if id, ok := innerIdMap["id"]; ok {
-							idParts := strings.Split(id, "-");
-							if idParts[0] >= highestMili {
-								highestMili = idParts[0];
-								highestMilisSeq = idParts[1];
-							}
+						keyValArr = append(keyValArr, key);
+						keyValArr = append(keyValArr, value);
+					}
+
+					streamData[streamKey] = append(streamData[streamKey], StreamEntry{
+						ID: streamKeysId,
+						Fields: keyValArr,
+					});
+				} else {
+					highestMili := -1;
+					highestMilisSeq := 0;
+					
+					for _, entry := range streamData[streamKey] {
+						idParts := strings.Split(entry.ID, "-");
+						mili, _ := strconv.Atoi(idParts[0]);
+						seq, _ := strconv.Atoi(idParts[1]);
+
+						if mili >= highestMili {
+							highestMili = mili;
+							highestMilisSeq = seq;
 						}
 					}
 
 					milisec := time.Now().UnixNano() / int64(time.Millisecond);
-					maxMili, err := strconv.Atoi(highestMili);
-					if err != nil {
-						fmt.Println("Error converting highestMili to int:", err.Error())
-						return
-					}
 
-					if milisec > int64(maxMili) {
-						streamKeysId = strconv.Itoa(int(milisec)) + "-0"
-					} else if milisec == int64(maxMili) {
-						x, err := strconv.Atoi(highestMilisSeq)
-						if err != nil {
-							fmt.Println("Error converting highestSeq to int:", err.Error())
-							return
-						}
-						x++
-						streamKeysId = strconv.Itoa(int(milisec)) + "-" + strconv.Itoa(x)
+					if milisec > int64(highestMili) {
+						streamKeysId = strconv.Itoa(int(milisec)) + "-0";
+					} else if milisec == int64(highestMili) {
+						streamKeysId = strconv.Itoa(int(milisec)) + "-" + strconv.Itoa(highestMilisSeq + 1);
 					} else {
 						_, err := connection.Write([]byte("-ERR The ID specified in XADD is equal or smaller than the target stream top item\r\n"));
 						if err != nil {
@@ -379,13 +382,18 @@ func handleArray(data []byte, connection net.Conn, server *Server) {
 						return;
 					}
 
-					streamMap[streamKey]["id"] = streamKeysId;
+					var keyValArr []string;
 					for i := 0; i < len(keyValues); i += 4 {
 						key := keyValues[i + 1];
 						value := keyValues[i + 3];
-		
-						streamMap[streamKey][key] = value;
+
+						keyValArr = append(keyValArr, key);
+						keyValArr = append(keyValArr, value);
 					}
+					streamData[streamKey] = append(streamData[streamKey], StreamEntry{
+						ID: streamKeysId,
+						Fields: keyValArr,
+					});
 				}
 
 				dataToSend := "$" + strconv.Itoa(len(streamKeysId)) + "\r\n" + streamKeysId + "\r\n";
@@ -397,6 +405,7 @@ func handleArray(data []byte, connection net.Conn, server *Server) {
 			} else {
 				idParts := strings.Split(streamKeysId, "-");
 				if idParts[1] == "*" {
+
 					if len(idParts) != 2 {
 						_, err := connection.Write([]byte("-ERR The ID specified in XADD is equal or smaller than the target stream top item\r\n"));
 						if err != nil {
@@ -410,49 +419,49 @@ func handleArray(data []byte, connection net.Conn, server *Server) {
 						fmt.Println("Error: Invalid number of key value pairs");
 						return;
 					}
-					_, ok := streamMap[streamKey];
+
+					_, ok := streamData[streamKey];
 					if !ok {
-						streamMap[streamKey] = make(map[string]string);
 						if idParts[0] == "0" {
 							streamKeysId = "0-1";
-							streamMap[streamKey]["id"] = streamKeysId;
 						} else {
 							streamKeysId = idParts[0] + "-0";
-							streamMap[streamKey]["id"] = streamKeysId;
 						}
 
+						var keyValArr []string;
 						for i := 0; i < len(keyValues); i += 4 {
 							key := keyValues[i + 1];
 							value := keyValues[i + 3];
-		
-							streamMap[streamKey][key] = value;
+
+							keyValArr = append(keyValArr, key);
+							keyValArr = append(keyValArr, value);
 						}
+
+						streamData[streamKey] = append(streamData[streamKey], StreamEntry{
+							ID: streamKeysId,
+							Fields: keyValArr,
+						})
 					} else {
+						highestMili := -1;
+						highestMilisSeq := 0;
 
-						highestMili := "-1";
-						highestMilisSeq := "0";
+						for _, entry := range streamData[streamKey] {
+							idParts := strings.Split(entry.ID, "-");
+							mili, _ := strconv.Atoi(idParts[0]);
+							seq, _ := strconv.Atoi(idParts[1]);
 
-						for _, innerIdMap := range streamMap {
-							if id, ok := innerIdMap["id"]; ok {
-								idParts := strings.Split(id, "-");
-								if idParts[0] >= highestMili {
-									highestMili = idParts[0];
-									highestMilisSeq = idParts[1];
-								}
+							if mili >= highestMili {
+								highestMili = mili;
+								highestMilisSeq = seq;
 							}
 						}
 
+						idPart0, _ := strconv.Atoi(idParts[0]);
 
-						if idParts[0] > highestMili {
-							streamKeysId = idParts[0] + "-0"
-						} else if idParts[0] == highestMili {
-							x, err := strconv.Atoi(highestMilisSeq)
-							if err != nil {
-								fmt.Println("Error converting highestSeq to int:", err.Error())
-								return
-							}
-							x++
-							streamKeysId = idParts[0] + "-" + strconv.Itoa(x)
+						if idPart0 > highestMili {
+							streamKeysId = idParts[0] + "-0";
+						} else if idPart0 == highestMili {
+							streamKeysId = idParts[0] + "-" + strconv.Itoa(highestMilisSeq + 1);
 						} else {
 							_, err := connection.Write([]byte("-ERR The ID specified in XADD is equal or smaller than the target stream top item\r\n"));
 							if err != nil {
@@ -461,13 +470,18 @@ func handleArray(data []byte, connection net.Conn, server *Server) {
 							return;
 						}
 
-						streamMap[streamKey]["id"] = streamKeysId;
+						var keyValArr []string;
 						for i := 0; i < len(keyValues); i += 4 {
 							key := keyValues[i + 1];
 							value := keyValues[i + 3];
-			
-							streamMap[streamKey][key] = value;
+
+							keyValArr = append(keyValArr, key);
+							keyValArr = append(keyValArr, value);
 						}
+						streamData[streamKey] = append(streamData[streamKey], StreamEntry{
+							ID: streamKeysId,
+							Fields: keyValArr,
+						});
 					}
 
 					dataToSend := "$" + strconv.Itoa(len(streamKeysId)) + "\r\n" + streamKeysId + "\r\n";
@@ -490,43 +504,50 @@ func handleArray(data []byte, connection net.Conn, server *Server) {
 						}
 						return;
 					}
-		
+
 					keyValues := parts[7:];
 					if len(keyValues) % 2 != 0 {
 						fmt.Println("Error: Invalid number of key value pairs");
 						return;
 					}
-					
-					_, ok := streamMap[streamKey];
+
+					_, ok := streamData[streamKey];
 					if !ok {
-						// create a new stream key and add all the entries
-						streamMap[streamKey] = make(map[string]string);
-						streamMap[streamKey]["id"] = streamKeysId;
-		
+						var keyValArr []string;
+
 						for i := 0; i < len(keyValues); i += 4 {
 							key := keyValues[i + 1];
 							value := keyValues[i + 3];
-		
-							streamMap[streamKey][key] = value;
+
+							keyValArr = append(keyValArr, key);
+							keyValArr = append(keyValArr, value);
 						}
+
+						streamData[streamKey] = append(streamData[streamKey], StreamEntry{
+							ID: streamKeysId,
+							Fields: keyValArr,
+						});
 					} else {
-						// check for id
-						highestmili := "-1";
-						highestSeq := "-1";
-						for _, innerIdMap := range streamMap {
-							if id, ok := innerIdMap["id"]; ok {
-								idParts := strings.Split(id, "-");
-								if idParts[0] > highestmili {
-									highestmili = idParts[0];
-								}
-								if idParts[1] > highestSeq {
-									highestSeq = idParts[1];
-								}
+						highestMili := -1;
+						highestSeq := -1;
+
+						for _, entry := range streamData[streamKey] {
+							idParts := strings.Split(entry.ID, "-");
+							mili, _ := strconv.Atoi(idParts[0]);
+							seq, _ := strconv.Atoi(idParts[1]);
+
+							if mili > highestMili {
+								highestMili = mili;
+								highestSeq = seq;
+							} else if mili == highestMili && seq > highestSeq {
+								highestSeq = seq;
 							}
 						}
-		
-						if idParts[0] >= highestmili {
-							if idParts[1] <= highestSeq {
+
+						idPart0, _ := strconv.Atoi(idParts[0])
+						idPart1, _ := strconv.Atoi(idParts[1])
+						if idPart0 >= highestMili {
+							if idPart1 <= highestSeq {
 								_, err := connection.Write([]byte("-ERR The ID specified in XADD is equal or smaller than the target stream top item\r\n"));
 								if err != nil {
 									fmt.Println("Error writing:", err.Error());
@@ -540,20 +561,75 @@ func handleArray(data []byte, connection net.Conn, server *Server) {
 							}
 							return;
 						}
-		
-						streamMap[streamKey]["id"] = streamKeysId;
+
+						var keyValArr []string;
 						for i := 0; i < len(keyValues); i += 4 {
 							key := keyValues[i + 1];
 							value := keyValues[i + 3];
-			
-							streamMap[streamKey][key] = value;
+
+							keyValArr = append(keyValArr, key);
+							keyValArr = append(keyValArr, value);
 						}
+						streamData[streamKey] = append(streamData[streamKey], StreamEntry{
+							ID: streamKeysId,
+							Fields: keyValArr,
+						})
 					}
 					dataToSend := "$" + strconv.Itoa(len(streamKeysId)) + "\r\n" + streamKeysId + "\r\n";
 					_, err := connection.Write([]byte(dataToSend));
 					if err != nil {
 						fmt.Println("Error writing:", err.Error());
 					}
+				}
+			}
+		} else if strings.ToLower(parts[2]) == "xrange" {
+			streamKey := parts[4];
+			
+			_, ok := streamData[streamKey];
+			if !ok {
+				_, err := connection.Write([]byte("*0\r\n"));
+				if err != nil {
+					fmt.Println("Error writing:", err.Error());
+				}
+				return;
+			}
+
+			if len(parts) > 5 {
+				start := parts[6]
+				end := parts[8]
+			
+				matchingEntries := []StreamEntry{}
+				for _, entry := range streamData[streamKey] {
+					if entry.ID >= start && entry.ID <= end {
+						matchingEntries = append(matchingEntries, entry)
+					}
+				}
+			
+				dataToSend := "*" + strconv.Itoa(len(matchingEntries)) + "\r\n"
+				for _, entry := range matchingEntries {
+					dataToSend += "*2\r\n$" + strconv.Itoa(len(entry.ID)) + "\r\n" + entry.ID + "\r\n*" + strconv.Itoa(len(entry.Fields)) + "\r\n"
+					for i := 0; i < len(entry.Fields); i += 2 {
+						dataToSend += "$" + strconv.Itoa(len(entry.Fields[i])) + "\r\n" + entry.Fields[i] + "\r\n" + "$" + strconv.Itoa(len(entry.Fields[i + 1])) + "\r\n" + entry.Fields[i + 1] + "\r\n"
+					}
+				}
+			
+				_, err := connection.Write([]byte(dataToSend))
+				if err != nil {
+					fmt.Println("Error writing:", err.Error())
+				}
+			} else {
+				dataToSend := "*" + strconv.Itoa(len(streamData[streamKey])) + "\r\n";
+				
+				for _, entry := range streamData[streamKey] {
+					dataToSend += "*2\r\n$" + strconv.Itoa(len(entry.ID)) + "\r\n" + entry.ID + "\r\n*" + strconv.Itoa(len(entry.Fields)) + "\r\n";
+					for i := 0; i < len(entry.Fields); i += 2 {
+						dataToSend += "$" + strconv.Itoa(len(entry.Fields[i])) + "\r\n" + entry.Fields[i] + "\r\n" + "$" + strconv.Itoa(len(entry.Fields[i + 1])) + "\r\n" + entry.Fields[i + 1] + "\r\n";
+					}
+				}
+
+				_, err := connection.Write([]byte(dataToSend));
+				if err != nil {
+					fmt.Println("Error writing:", err.Error());
 				}
 			}
 		}
