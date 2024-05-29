@@ -152,7 +152,7 @@ func handleConnection(conn net.Conn, server *Server) {
             } else if strings.Contains(strings.ToLower(command[i]), "xadd") {
                 command[i] = "*" + command[i]
                 parts := strings.Split(command[i], "\r\n")
-                if strings.HasSuffix(parts[len(parts) - 1], "-") {
+                if strings.HasSuffix(parts[len(parts) - 1], "-") || len(parts) == 7 {
                     // get the next element in the array and append it to the current element
                     command[i] = command[i] + "*" + command[i + 1];
                     ParseData([]byte(command[i]), conn, server)

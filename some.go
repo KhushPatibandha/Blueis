@@ -76,7 +76,8 @@ func main() {
 	
 	// data := []byte("*3\r\n$4\r\nWAIT\r\n$1\r\n0\r\n$5\r\n60000\r\n");
 	// data := []byte("*2\r\n$4\r\nkeys\r\n$1\r\n*\r\n");
-	data := []byte("*5\r\n$4\r\nXADD\r\n$10\r\nstream_key\r\n$3\r\n5-*\r\n$3\r\nfoo\r\n$3\r\nbar\r\n");
+	// data := []byte("*5\r\n$4\r\nXADD\r\n$10\r\nstream_key\r\n$3\r\n5-*\r\n$3\r\nfoo\r\n$3\r\nbar\r\n");
+	data := []byte("*5\r\n$4\r\nXADD\r\n$10\r\nstream_key\r\n$1\r\n*\r\n$3\r\nfoo\r\n$3\r\nbar\r\n");
 
 	command := strings.Split(string(data), "*");
 	// fmt.Println(command);
@@ -92,10 +93,10 @@ func main() {
 		} else if strings.Contains(strings.ToLower(command[i]), "xadd") {
 			command[i] = "*" + command[i]
 			parts := strings.Split(command[i], "\r\n")
-			if strings.HasSuffix(parts[len(parts) - 1], "-") {
+			if strings.HasSuffix(parts[len(parts) - 1], "-") || len(parts) == 7 {
 				// get the next element in the array and append it to the current element
 				command[i] = command[i] + "*" + command[i + 1];
-				fmt.Println("command[i]: ", string(command[i]));
+				handleArray([]byte(command[i]));
 				i++;
 				continue;
 			}
