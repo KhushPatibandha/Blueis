@@ -57,7 +57,7 @@ func main() {
 	// data := []byte("*2\r\n$4\r\nECHO\r\n$3\r\nhey\r\n");
 	// data := []byte("*1\r\n$4\r\nPING\r\n");
 	// data := []byte("*3\r\n$3\r\nSET\r\n$3\r\nfoo\r\n$3\r\nbar\r\n");
-	data := []byte("*2\r\n$3\r\nGET\r\n$3\r\nfoo\r\n");
+	// data := []byte("*2\r\n$3\r\nGET\r\n$3\r\nfoo\r\n");
 	// data := []byte("*5\r\n$3\r\nSET\r\n$3\r\nfoo\r\n$3\r\nbar\r\n$2\r\nPX\r\n$3\r\n100\r\n");
 	// data := []byte("*2\r\n$4\r\nINFO\r\n$11\r\nreplication\r\n");
 	// data := []byte("*3\r\n$8\r\nREPLCONF\r\n$14\r\nlistening-port\r\n$4\r\n6380\r\n");
@@ -76,6 +76,7 @@ func main() {
 	
 	// data := []byte("*3\r\n$4\r\nWAIT\r\n$1\r\n0\r\n$5\r\n60000\r\n");
 	// data := []byte("*2\r\n$4\r\nkeys\r\n$1\r\n*\r\n");
+	data := []byte("*5\r\n$4\r\nXADD\r\n$10\r\nstream_key\r\n$3\r\n5-*\r\n$3\r\nfoo\r\n$3\r\nbar\r\n");
 
 	command := strings.Split(string(data), "*");
 	// fmt.Println(command);
@@ -88,6 +89,16 @@ func main() {
 
 		if strings.ToLower(command[i]) == "3\r\n$8\r\nreplconf\r\n$6\r\ngetack\r\n$1\r\n" || strings.ToLower(command[i]) == "2\r\n$4\r\nkeys\r\n$1\r\n" {
 			command[i] = "*" + command[i] + "*\r\n"
+		} else if strings.Contains(strings.ToLower(command[i]), "xadd") {
+			command[i] = "*" + command[i]
+			parts := strings.Split(command[i], "\r\n")
+			if strings.HasSuffix(parts[len(parts) - 1], "-") {
+				// get the next element in the array and append it to the current element
+				command[i] = command[i] + "*" + command[i + 1];
+				fmt.Println("command[i]: ", string(command[i]));
+				i++;
+				continue;
+			}
 		} else {
 			command[i] = "*" + command[i]
 		}

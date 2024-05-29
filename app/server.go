@@ -149,6 +149,16 @@ func handleConnection(conn net.Conn, server *Server) {
 
             if strings.ToLower(command[i]) == "3\r\n$8\r\nreplconf\r\n$6\r\ngetack\r\n$1\r\n" || strings.ToLower(command[i]) == "2\r\n$4\r\nkeys\r\n$1\r\n" {
                 command[i] = "*" + command[i] + "*\r\n"
+            } else if strings.Contains(strings.ToLower(command[i]), "xadd") {
+                command[i] = "*" + command[i]
+                parts := strings.Split(command[i], "\r\n")
+                if strings.HasSuffix(parts[len(parts) - 1], "-") {
+                    // get the next element in the array and append it to the current element
+                    command[i] = command[i] + "*" + command[i + 1];
+                    ParseData([]byte(command[i]), conn, server)
+                    i++;
+                    continue;
+                }
             } else {
                 command[i] = "*" + command[i]
             }
