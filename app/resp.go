@@ -656,6 +656,40 @@ func handleArray(data []byte, connection net.Conn, server *Server) {
 					fmt.Println("Error writing:", err.Error());
 				}
 			}
+		} else if strings.ToLower(parts[2]) == "xread" {
+			if strings.ToLower(parts[4]) == "streams" {
+				streamKey := parts[6]
+				startExclusive := parts[8]
+		
+				_, ok := streamData[streamKey]
+				if !ok {
+					_, err := connection.Write([]byte("*-1\r\n"))
+					if err != nil {
+						fmt.Println("Error writing:", err.Error())
+					}
+					return
+				}
+		
+				matchingEntries := []StreamEntry{}
+				for _, entry := range streamData[streamKey] {
+					if entry.ID > startExclusive {
+						matchingEntries = append(matchingEntries, entry)
+					}
+				}
+		
+				dataToSend := "*1\r\n*2\r\n$" + strconv.Itoa(len(streamKey)) + "\r\n" + streamKey + "\r\n*" + strconv.Itoa(len(matchingEntries)) + "\r\n"
+				for _, entry := range matchingEntries {
+					dataToSend += "*2\r\n$" + strconv.Itoa(len(entry.ID)) + "\r\n" + entry.ID + "\r\n*" + strconv.Itoa(len(entry.Fields)) + "\r\n"
+					for i := 0; i < len(entry.Fields); i += 2 {
+						dataToSend += "$" + strconv.Itoa(len(entry.Fields[i])) + "\r\n" + entry.Fields[i] + "\r\n" + "$" + strconv.Itoa(len(entry.Fields[i + 1])) + "\r\n" + entry.Fields[i + 1] + "\r\n"
+					}
+				}
+		
+				_, err := connection.Write([]byte(dataToSend))
+				if err != nil {
+					fmt.Println("Error writing:", err.Error())
+				}
+			}
 		}
 		// else if strings.ToLower(parts[2]) == "keys" {
 		// 	if strings.ToLower(parts[4]) == "*" {
