@@ -662,7 +662,10 @@ func handleArray(data []byte, connection net.Conn, server *Server) {
 				streamCount := 0
 				for i := 6; i < len(parts); i += 2 {
 					streamKey := parts[i]
-					startExclusive := parts[i+1]
+					startExclusive := "0-0"
+					if i+1 < len(parts) {
+						startExclusive = parts[i+1]
+					}
 		
 					_, ok := streamData[streamKey]
 					if !ok {
