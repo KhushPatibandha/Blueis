@@ -753,7 +753,6 @@ func handleArray(data []byte, connection net.Conn, server *Server) {
 								break;
 							}
 						}
-						fmt.Println("matching entries: ", matchingEntries)
 
 						if len(matchingEntries) > 0 {
 							streamCount++;
