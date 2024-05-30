@@ -748,6 +748,28 @@ func handleArray(data []byte, connection net.Conn, server *Server) {
 							dataToSend += "$" + strconv.Itoa(len(entry.Fields[i])) + "\r\n" + entry.Fields[i] + "\r\n" + "$" + strconv.Itoa(len(entry.Fields[i + 1])) + "\r\n" + entry.Fields[i + 1] + "\r\n"
 						}
 					}
+				} else if matchingEntries == nil && blockTimeInMilli == 0 {
+					// wait indifinitely and return the next / new first data that is inserted into the stream
+					for {
+						matchingEntries = []StreamEntry{};
+						for _, entry := range streamData[streamKey] {
+							if entry.ID > streamId {
+								matchingEntries = append(matchingEntries, entry);
+							}
+						}
+
+						if len(matchingEntries) > 0 {
+							streamCount++;
+							dataToSend += "*2\r\n$" + strconv.Itoa(len(streamKey)) + "\r\n" + streamKey + "\r\n*" + strconv.Itoa(len(matchingEntries)) + "\r\n"
+							for _, entry := range matchingEntries {
+								dataToSend += "*2\r\n$" + strconv.Itoa(len(entry.ID)) + "\r\n" + entry.ID + "\r\n*" + strconv.Itoa(len(entry.Fields)) + "\r\n"
+								for i := 0; i < len(entry.Fields); i += 2 {
+									dataToSend += "$" + strconv.Itoa(len(entry.Fields[i])) + "\r\n" + entry.Fields[i] + "\r\n" + "$" + strconv.Itoa(len(entry.Fields[i + 1])) + "\r\n" + entry.Fields[i + 1] + "\r\n"
+								}
+							}
+							break;
+						}
+					}
 				}
 
 				if streamCount > 0 {
