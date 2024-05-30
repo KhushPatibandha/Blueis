@@ -706,18 +706,16 @@ func handleArray(data []byte, connection net.Conn, server *Server) {
 			} else if strings.ToLower(parts[4]) == "block" && strings.ToLower(parts[8]) == "streams" {
 				dataToSend := ""
 				streamCount := 0;
-				fmt.Println("check1")
 				blockTimeInMilli, _ := strconv.Atoi(parts[6]);
 				streamKey := parts[10];
 				streamId := parts[12];
-				fmt.Println("check2")
 
-				time.Sleep(time.Duration(blockTimeInMilli) * time.Millisecond);
+				if blockTimeInMilli != 0 {
+					time.Sleep(time.Duration(blockTimeInMilli) * time.Millisecond);
+				}
 
-				fmt.Println("check3")
 				_, ok := streamData[streamKey];
 				if !ok {
-					fmt.Println("check4")
 					_, err := connection.Write([]byte("*-1\r\n"));
 					if err != nil {
 						fmt.Println("Error writing:", err.Error());
@@ -727,7 +725,6 @@ func handleArray(data []byte, connection net.Conn, server *Server) {
 
 				fmt.Println("stream data: ", streamData[streamKey])
 
-				fmt.Println("check5")
 				matchingEntries := []StreamEntry{};
 				for _, entry := range streamData[streamKey] {
 					fmt.Println("check6")
@@ -738,7 +735,6 @@ func handleArray(data []byte, connection net.Conn, server *Server) {
 				}
 				fmt.Println("matching entries: ", matchingEntries)
 
-				fmt.Println("check8")
 				if len(matchingEntries) > 0 {
 					streamCount++;
 					dataToSend += "*2\r\n$" + strconv.Itoa(len(streamKey)) + "\r\n" + streamKey + "\r\n*" + strconv.Itoa(len(matchingEntries)) + "\r\n"
@@ -748,15 +744,16 @@ func handleArray(data []byte, connection net.Conn, server *Server) {
 							dataToSend += "$" + strconv.Itoa(len(entry.Fields[i])) + "\r\n" + entry.Fields[i] + "\r\n" + "$" + strconv.Itoa(len(entry.Fields[i + 1])) + "\r\n" + entry.Fields[i + 1] + "\r\n"
 						}
 					}
-				} else if matchingEntries == nil && blockTimeInMilli == 0 {
-					// wait indifinitely and return the next / new first data that is inserted into the stream
+				} else if len(matchingEntries) == 0 && blockTimeInMilli == 0 {
 					for {
-						matchingEntries = []StreamEntry{};
+						matchingEntries := []StreamEntry{};
 						for _, entry := range streamData[streamKey] {
 							if entry.ID > streamId {
 								matchingEntries = append(matchingEntries, entry);
+								break;
 							}
 						}
+						fmt.Println("matching entries: ", matchingEntries)
 
 						if len(matchingEntries) > 0 {
 							streamCount++;
