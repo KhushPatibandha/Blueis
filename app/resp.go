@@ -710,6 +710,16 @@ func handleArray(data []byte, connection net.Conn, server *Server) {
 				streamKey := parts[10];
 				streamId := parts[12];
 
+				if streamId == "$" {
+					maxId := "0"
+					for _, entry := range streamData[streamKey] {
+						if entry.ID > maxId {
+							maxId = entry.ID
+						}
+					}
+					streamId = maxId
+				}
+
 				if blockTimeInMilli != 0 {
 					time.Sleep(time.Duration(blockTimeInMilli) * time.Millisecond);
 				}
@@ -762,7 +772,7 @@ func handleArray(data []byte, connection net.Conn, server *Server) {
 								break;
 							}
 						}
-						time.Sleep(100 * time.Millisecond) // Add a short delay before checking again
+						time.Sleep(100 * time.Millisecond);
 					}
 				}
 
