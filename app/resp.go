@@ -723,18 +723,12 @@ func handleArray(data []byte, connection net.Conn, server *Server) {
 					return;
 				}
 
-				fmt.Println("stream data: ", streamData[streamKey])
-
 				matchingEntries := []StreamEntry{};
 				for _, entry := range streamData[streamKey] {
-					fmt.Println("check6")
 					if entry.ID > streamId {
-						fmt.Println("check7")
 						matchingEntries = append(matchingEntries, entry);
 					}
 				}
-				fmt.Println("matching entries: ", matchingEntries)
-
 				if len(matchingEntries) > 0 {
 					streamCount++;
 					dataToSend += "*2\r\n$" + strconv.Itoa(len(streamKey)) + "\r\n" + streamKey + "\r\n*" + strconv.Itoa(len(matchingEntries)) + "\r\n"
@@ -745,26 +739,30 @@ func handleArray(data []byte, connection net.Conn, server *Server) {
 						}
 					}
 				} else if len(matchingEntries) == 0 && blockTimeInMilli == 0 {
+					x := len(streamData);
 					for {
-						matchingEntries := []StreamEntry{};
-						for _, entry := range streamData[streamKey] {
-							if entry.ID > streamId {
-								matchingEntries = append(matchingEntries, entry);
+						streamMapLen := len(streamData);
+						if streamMapLen >= x {
+							matchingEntries := []StreamEntry{};
+							for _, entry := range streamData[streamKey] {
+								if entry.ID > streamId {
+									matchingEntries = append(matchingEntries, entry);
+									break;
+								}
+							}
+							if len(matchingEntries) > 0 {
+								streamCount++;
+								dataToSend += "*2\r\n$" + strconv.Itoa(len(streamKey)) + "\r\n" + streamKey + "\r\n*" + strconv.Itoa(len(matchingEntries)) + "\r\n"
+								for _, entry := range matchingEntries {
+									dataToSend += "*2\r\n$" + strconv.Itoa(len(entry.ID)) + "\r\n" + entry.ID + "\r\n*" + strconv.Itoa(len(entry.Fields)) + "\r\n"
+									for i := 0; i < len(entry.Fields); i += 2 {
+										dataToSend += "$" + strconv.Itoa(len(entry.Fields[i])) + "\r\n" + entry.Fields[i] + "\r\n" + "$" + strconv.Itoa(len(entry.Fields[i + 1])) + "\r\n" + entry.Fields[i + 1] + "\r\n"
+									}
+								}
 								break;
 							}
 						}
-
-						if len(matchingEntries) > 0 {
-							streamCount++;
-							dataToSend += "*2\r\n$" + strconv.Itoa(len(streamKey)) + "\r\n" + streamKey + "\r\n*" + strconv.Itoa(len(matchingEntries)) + "\r\n"
-							for _, entry := range matchingEntries {
-								dataToSend += "*2\r\n$" + strconv.Itoa(len(entry.ID)) + "\r\n" + entry.ID + "\r\n*" + strconv.Itoa(len(entry.Fields)) + "\r\n"
-								for i := 0; i < len(entry.Fields); i += 2 {
-									dataToSend += "$" + strconv.Itoa(len(entry.Fields[i])) + "\r\n" + entry.Fields[i] + "\r\n" + "$" + strconv.Itoa(len(entry.Fields[i + 1])) + "\r\n" + entry.Fields[i + 1] + "\r\n"
-								}
-							}
-							break;
-						}
+						time.Sleep(100 * time.Millisecond) // Add a short delay before checking again
 					}
 				}
 
