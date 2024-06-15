@@ -42,9 +42,6 @@ func main() {
     Dir = *dir;
     Dbfilename = *dbfilename;
 
-    // fmt.Println("Port:", *port);
-    // fmt.Println("Replicaof:", *replicaof);
-
     portInt, _ := strconv.Atoi(*port);
 
     if *port != "" && *replicaof != "" {
@@ -206,7 +203,6 @@ func performHandShake(conn net.Conn, server *Server) {
         if err != nil {
             fmt.Println("Error reading:", err.Error());
         }
-        // fmt.Println("Handshake response:", string(buf));
     }
 }
 

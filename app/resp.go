@@ -1,9 +1,11 @@
 package main
 
 import (
+	"encoding/binary"
 	"encoding/hex"
 	"fmt"
 	"net"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -167,18 +169,40 @@ func handleArray(data []byte, connection net.Conn, server *Server) {
 					fmt.Println("Error writing:", err.Error());
 				}
 			} else {
-				// key, value := readFile(Dir + "/" + Dbfilename);
-				// if key == parts[4] {
-				// 	dataToSend := "$" + strconv.Itoa(len(value)) + "\r\n" + value + "\r\n";
-				// 	_, err := connection.Write([]byte(dataToSend));
-				// 	if err != nil {
-				// 		fmt.Println("Error writing:", err.Error());
-				// 	}
-				// 	return;	
-				// }
-				_, err := connection.Write([]byte("$-1\r\n"));
+				filePath := Dir + "/" + Dbfilename;
+
+				file, err := os.Open(filePath)
 				if err != nil {
-					fmt.Println("Error writing:", err.Error());
+					fmt.Println("Error opening RDB file:", err)
+					return
+				}
+				defer file.Close()
+
+				file.Seek(9, 0)
+
+				keyValueMap, err := readAllKeyValues(file)
+				if err != nil {
+					fmt.Println("Error reading key-value pairs from RDB file:", err)
+					return
+				}
+
+				// set the values in the map, so that we dont have to read the file again for keys in the rdb file
+				for key, value := range keyValueMap {
+					setGetMap[key] = value;
+				}
+
+				value, ok := keyValueMap[parts[4]];
+				if ok {
+					dataToSend := "$" + strconv.Itoa(len(value)) + "\r\n" + value + "\r\n";
+					_, err := connection.Write([]byte(dataToSend));
+					if err != nil {
+						fmt.Println("Error writing:", err.Error());
+					}
+				} else {
+					_, err = connection.Write([]byte("$-1\r\n"));
+					if err != nil {
+						fmt.Println("Error writing:", err.Error());
+					}
 				}
 			}
 		} else if strings.ToLower(parts[2]) == "info" {
@@ -789,20 +813,36 @@ func handleArray(data []byte, connection net.Conn, server *Server) {
 					}
 				}
 			}
+		} else if strings.ToLower(parts[2]) == "keys" {
+			if strings.ToLower(parts[4]) == "*" {
+				filePath := Dir + "/" + Dbfilename;
+
+				file, err := os.Open(filePath)
+				if err != nil {
+					fmt.Println("Error opening RDB file:", err)
+					return
+				}
+				defer file.Close()
+
+				file.Seek(9, 0)
+
+				keyValueMap, err := readAllKeyValues(file)
+				if err != nil {
+					fmt.Println("Error reading key-value pairs from RDB file:", err)
+					return
+				}
+
+				dataToSend := "*" + strconv.Itoa(len(keyValueMap)) + "\r\n";
+				for key := range keyValueMap {
+					dataToSend += "$" + strconv.Itoa(len(key)) + "\r\n" + key + "\r\n";
+				}
+
+				_, err = connection.Write([]byte(dataToSend));
+				if err != nil {
+					fmt.Println("Error writing:", err.Error());
+				}
+			}
 		}
-		// else if strings.ToLower(parts[2]) == "keys" {
-		// 	if strings.ToLower(parts[4]) == "*" {
-		// 		filePath := Dir + "/" + Dbfilename;
-
-		// 		key, _ := readFile(filePath);
-
-		// 		dataToSend := "*1\r\n$" + strconv.Itoa(len(key)) + "\r\n" + key + "\r\n";
-		// 		_, err := connection.Write([]byte(dataToSend));
-		// 		if err != nil {
-		// 			fmt.Println("Error writing:", err.Error());
-		// 		}
-		// 	}
-		// }
     }
 }
 
@@ -812,29 +852,142 @@ func handleBulkStrings(date []byte) {
 // -------------------------------------------------------------------
 // @Utility for "KEYS *"
 
-// func sliceIndex(data []byte, sep byte) int {
-// 	for i, b := range data {
-// 		if b == sep {
-// 			return i
-// 		}
-// 	}
-// 	return -1
-// }
-// func parseTable(bytes []byte) []byte {
-// 	start := sliceIndex(bytes, opCodeResizeDB)
-// 	end := sliceIndex(bytes, opCodeEOF)
-// 	return bytes[start+1 : end]
-// }
-// func readFile(path string) (string, string) {
-// 	c, _ := os.ReadFile(path)
-// 	key := parseTable(c)
-// 	if key == nil {
-// 		return "", "";
-// 	}
-// 	str := key[4 : 4+key[3]]
-// 	value := key[4+key[3]+1 : 4+key[3]+1+key[4+key[3]]]
-// 	return string(str), string(value);
-// }
+func readSizeEncoding(file *os.File) (int, error) {
+	var firstByte byte
+	err := binary.Read(file, binary.LittleEndian, &firstByte)
+	if err != nil {
+		return 0, err
+	}
+
+	switch firstByte >> 6 {
+	case 0b00:
+		return int(firstByte & 0x3F), nil
+	case 0b01:
+		var secondByte byte
+		err := binary.Read(file, binary.BigEndian, &secondByte)
+		if err != nil {
+			return 0, err
+		}
+		return int(firstByte&0x3F)<<8 | int(secondByte), nil
+	case 0b10:
+		var size int32
+		err := binary.Read(file, binary.BigEndian, &size)
+		if err != nil {
+			return 0, err
+		}
+		return int(size), nil
+	case 0b11:
+		return int(firstByte), nil
+	}
+	return 0, fmt.Errorf("invalid size encoding: 0x%x", firstByte)
+}
+
+func readStringEncoding(file *os.File) (string, error) {
+	size, err := readSizeEncoding(file)
+	if err != nil {
+		return "", err
+	}
+
+	switch size & 0xC0 {
+	case 0x00, 0x40, 0x80:
+		data := make([]byte, size)
+		_, err = file.Read(data)
+		if err != nil {
+			return "", err
+		}
+		return string(data), nil
+	case 0xC0:
+		switch size & 0x3F {
+		case 0x00:
+			var value int8
+			err = binary.Read(file, binary.LittleEndian, &value)
+			if err != nil {
+				return "", err
+			}
+			return fmt.Sprintf("%d", value), nil
+		case 0x01:
+			var value int16
+			err = binary.Read(file, binary.LittleEndian, &value)
+			if err != nil {
+				return "", err
+			}
+			return fmt.Sprintf("%d", value), nil
+		case 0x02:
+			var value int32
+			err = binary.Read(file, binary.LittleEndian, &value)
+			if err != nil {
+				return "", err
+			}
+			return fmt.Sprintf("%d", value), nil
+		case 0x03:
+			// LZF compression not supported
+			return "", fmt.Errorf("LZF compression is not supported")
+		}
+	}
+
+	return "", fmt.Errorf("unsupported string encoding: 0x%x", size)
+}
+
+func readAllKeyValues(file *os.File) (map[string]string, error) {
+	keyValueMap := make(map[string]string)
+
+	for {
+		var flag byte
+		err := binary.Read(file, binary.LittleEndian, &flag)
+		if err != nil {
+			return nil, err
+		}
+
+		switch flag {
+		case 0xFA:
+			// Read auxiliary field (ignore content)
+			_, err := readStringEncoding(file) // key
+			if err != nil {
+				return nil, err
+			}
+			_, err = readStringEncoding(file) // value
+			if err != nil {
+				return nil, err
+			}
+		case 0xFE:
+			// Read database selector (ignore)
+			_, err := readSizeEncoding(file)
+			if err != nil {
+				return nil, err
+			}
+		case 0xFB:
+			// Read resizedb field (ignore sizes)
+			_, err := readSizeEncoding(file)
+			if err != nil {
+				return nil, err
+			}
+			_, err = readSizeEncoding(file)
+			if err != nil {
+				return nil, err
+			}
+		case 0xFC:
+			// Skip expiry time in milliseconds
+			file.Seek(8, 1)
+		case 0xFD:
+			// Skip expiry time in seconds
+			file.Seek(4, 1)
+		case 0xFF:
+			// End of file
+			return keyValueMap, nil
+		default:
+			// Read key-value pair without expiry
+			key, err := readStringEncoding(file)
+			if err != nil {
+				return nil, err
+			}
+			value, err := readStringEncoding(file)
+			if err != nil {
+				return nil, err
+			}
+			keyValueMap[key] = value
+		}
+	}
+}
 
 // RESP data type		Minimal protocol version	Category	First byte
 // Simple strings		RESP2						Simple		+
