@@ -11,27 +11,19 @@ import (
 	"time"
 )
 
-// const (
-// 	opCodeModuleAux    byte = 247 /* Module auxiliary data. */
-// 	opCodeIdle         byte = 248 /* LRU idle time. */
-// 	opCodeFreq         byte = 249 /* LFU frequency. */
-// 	opCodeAux          byte = 250 /* RDB aux field. */
-// 	opCodeResizeDB     byte = 251 /* Hash table resize hint. */
-// 	opCodeExpireTimeMs byte = 252 /* Expire time in milliseconds. */
-// 	opCodeExpireTime   byte = 253 /* Old expire time in seconds. */
-// 	opCodeSelectDB     byte = 254 /* DB number of the following keys. */
-// 	opCodeEOF          byte = 255
-// )
-
 type StreamEntry struct {
 	ID		string
 	Fields	[]string
 }
 
+type KeyValue struct {
+	Value       string
+	ExpiryTime  *time.Time
+}
+
 var streamData = make(map[string][]StreamEntry);
 var setGetMap = make(map[string]string);
 var expiryMap = make(map[string]time.Time)
-
 
 func ParseData(data []byte, connection net.Conn, server *Server) {
 	if data[0] == '$' {
@@ -188,20 +180,29 @@ func handleArray(data []byte, connection net.Conn, server *Server) {
 
 				// set the values in the map, so that we dont have to read the file again for keys in the rdb file
 				for key, value := range keyValueMap {
-					setGetMap[key] = value;
+					if(value.ExpiryTime == nil || time.Now().Before(*value.ExpiryTime)) {
+						setGetMap[key] = value.Value;
+					}
 				}
 
-				value, ok := keyValueMap[parts[4]];
+				value, ok := keyValueMap[parts[4]]
 				if ok {
-					dataToSend := "$" + strconv.Itoa(len(value)) + "\r\n" + value + "\r\n";
-					_, err := connection.Write([]byte(dataToSend));
+					if value.ExpiryTime != nil && time.Now().After(*value.ExpiryTime) {
+						_, err := connection.Write([]byte("$-1\r\n"))
+						if err != nil {
+							fmt.Println("Error writing:", err.Error())
+						}
+						return
+					}
+					dataToSend := "$" + strconv.Itoa(len(value.Value)) + "\r\n" + value.Value + "\r\n"
+					_, err := connection.Write([]byte(dataToSend))
 					if err != nil {
-						fmt.Println("Error writing:", err.Error());
+						fmt.Println("Error writing:", err.Error())
 					}
 				} else {
-					_, err = connection.Write([]byte("$-1\r\n"));
+					_, err := connection.Write([]byte("$-1\r\n"))
 					if err != nil {
-						fmt.Println("Error writing:", err.Error());
+						fmt.Println("Error writing:", err.Error())
 					}
 				}
 			}
@@ -832,8 +833,15 @@ func handleArray(data []byte, connection net.Conn, server *Server) {
 					return
 				}
 
-				dataToSend := "*" + strconv.Itoa(len(keyValueMap)) + "\r\n";
-				for key := range keyValueMap {
+				availableKeysArray := []string{};
+				for key, value := range keyValueMap {
+					if(value.ExpiryTime == nil || time.Now().Before(*value.ExpiryTime)) {
+						availableKeysArray = append(availableKeysArray, key);
+					}	
+				}
+
+				dataToSend := "*" + strconv.Itoa(len(availableKeysArray)) + "\r\n";
+				for _, key := range availableKeysArray {
 					dataToSend += "$" + strconv.Itoa(len(key)) + "\r\n" + key + "\r\n";
 				}
 
@@ -928,8 +936,8 @@ func readStringEncoding(file *os.File) (string, error) {
 	return "", fmt.Errorf("unsupported string encoding: 0x%x", size)
 }
 
-func readAllKeyValues(file *os.File) (map[string]string, error) {
-	keyValueMap := make(map[string]string)
+func readAllKeyValues(file *os.File) (map[string]KeyValue, error) {
+	keyValueMap := make(map[string]KeyValue)
 
 	for {
 		var flag byte
@@ -966,11 +974,53 @@ func readAllKeyValues(file *os.File) (map[string]string, error) {
 				return nil, err
 			}
 		case 0xFC:
-			// Skip expiry time in milliseconds
-			file.Seek(8, 1)
+			// Expiry time in milliseconds
+			var expiryMs int64
+			err := binary.Read(file, binary.LittleEndian, &expiryMs)
+			if err != nil {
+				return nil, err
+			}
+			expiryTime := time.Unix(0, expiryMs*int64(time.Millisecond))
+
+			// Read key-value pair
+			var valueType byte
+			err = binary.Read(file, binary.LittleEndian, &valueType)
+			if err != nil {
+				return nil, err
+			}
+			key, err := readStringEncoding(file)
+			if err != nil {
+				return nil, err
+			}
+			value, err := readStringEncoding(file)
+			if err != nil {
+				return nil, err
+			}
+			keyValueMap[key] = KeyValue{Value: value, ExpiryTime: &expiryTime}
 		case 0xFD:
-			// Skip expiry time in seconds
-			file.Seek(4, 1)
+			// Expiry time in seconds
+			var expirySeconds int32
+			err := binary.Read(file, binary.LittleEndian, &expirySeconds)
+			if err != nil {
+				return nil, err
+			}
+			expiryTime := time.Unix(int64(expirySeconds), 0)
+
+			// Read key-value pair
+			var valueType byte
+			err = binary.Read(file, binary.LittleEndian, &valueType)
+			if err != nil {
+				return nil, err
+			}
+			key, err := readStringEncoding(file)
+			if err != nil {
+				return nil, err
+			}
+			value, err := readStringEncoding(file)
+			if err != nil {
+				return nil, err
+			}
+			keyValueMap[key] = KeyValue{Value: value, ExpiryTime: &expiryTime}
 		case 0xFF:
 			// End of file
 			return keyValueMap, nil
@@ -984,7 +1034,7 @@ func readAllKeyValues(file *os.File) (map[string]string, error) {
 			if err != nil {
 				return nil, err
 			}
-			keyValueMap[key] = value
+			keyValueMap[key] = KeyValue{Value: value, ExpiryTime: nil}
 		}
 	}
 }

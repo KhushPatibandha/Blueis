@@ -261,15 +261,18 @@ func handleArray(data []byte) {
 				// Skip the header
 				file.Seek(9, 0)
 
-				keyValueMap, err := readAllKeyValues(file)
+				keyValues, err := readAllKeyValues(file)
 				if err != nil {
-					fmt.Println("Error reading key-value pairs from RDB file:", err)
+					fmt.Println("Error reading key values:", err)
 					return
 				}
 
-				// Print all keys and values
-				for key, value := range keyValueMap {
-					fmt.Printf("Key: %s, Value: %s\n", key, value)
+				for key, kv := range keyValues {
+					if kv.ExpiryTime != nil {
+						fmt.Printf("Key: %s, Value: %s, Expiry: %s\n", key, kv.Value, kv.ExpiryTime.String())
+					} else {
+						fmt.Printf("Key: %s, Value: %s, No Expiry\n", key, kv.Value)
+					}
 				}
 			}
 		}
@@ -352,8 +355,13 @@ func readStringEncoding(file *os.File) (string, error) {
 	return "", fmt.Errorf("unsupported string encoding: 0x%x", size)
 }
 
-func readAllKeyValues(file *os.File) (map[string]string, error) {
-	keyValueMap := make(map[string]string)
+type KeyValue struct {
+	Value       string
+	ExpiryTime  *time.Time
+}
+
+func readAllKeyValues(file *os.File) (map[string]KeyValue, error) {
+	keyValueMap := make(map[string]KeyValue)
 
 	for {
 		var flag byte
@@ -390,11 +398,53 @@ func readAllKeyValues(file *os.File) (map[string]string, error) {
 				return nil, err
 			}
 		case 0xFC:
-			// Skip expiry time in milliseconds
-			file.Seek(8, 1)
+			// Expiry time in milliseconds
+			var expiryMs int64
+			err := binary.Read(file, binary.LittleEndian, &expiryMs)
+			if err != nil {
+				return nil, err
+			}
+			expiryTime := time.Unix(0, expiryMs*int64(time.Millisecond))
+
+			// Read key-value pair
+			var valueType byte
+			err = binary.Read(file, binary.LittleEndian, &valueType)
+			if err != nil {
+				return nil, err
+			}
+			key, err := readStringEncoding(file)
+			if err != nil {
+				return nil, err
+			}
+			value, err := readStringEncoding(file)
+			if err != nil {
+				return nil, err
+			}
+			keyValueMap[key] = KeyValue{Value: value, ExpiryTime: &expiryTime}
 		case 0xFD:
-			// Skip expiry time in seconds
-			file.Seek(4, 1)
+			// Expiry time in seconds
+			var expirySeconds int32
+			err := binary.Read(file, binary.LittleEndian, &expirySeconds)
+			if err != nil {
+				return nil, err
+			}
+			expiryTime := time.Unix(int64(expirySeconds), 0)
+
+			// Read key-value pair
+			var valueType byte
+			err = binary.Read(file, binary.LittleEndian, &valueType)
+			if err != nil {
+				return nil, err
+			}
+			key, err := readStringEncoding(file)
+			if err != nil {
+				return nil, err
+			}
+			value, err := readStringEncoding(file)
+			if err != nil {
+				return nil, err
+			}
+			keyValueMap[key] = KeyValue{Value: value, ExpiryTime: &expiryTime}
 		case 0xFF:
 			// End of file
 			return keyValueMap, nil
@@ -408,7 +458,7 @@ func readAllKeyValues(file *os.File) (map[string]string, error) {
 			if err != nil {
 				return nil, err
 			}
-			keyValueMap[key] = value
+			keyValueMap[key] = KeyValue{Value: value, ExpiryTime: nil}
 		}
 	}
 }
