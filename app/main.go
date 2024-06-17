@@ -11,15 +11,9 @@ import (
 	"strings"
 	"sync"
 	"time"
-)
 
-type Server struct {
-    role                string
-    port                int
-    replId              string
-    offset              int
-    otherServersConn    []net.Conn
-}
+	typestructs "github.com/codecrafters-io/redis-starter-go/typeStructs"
+)
 
 var AckCount = 0;
 var masterPortGlobal int;
@@ -29,7 +23,7 @@ var Dir = "";
 var Dbfilename = "";
 
 func main() {
-    // .spwan_redis_server.sh --port 6380 --replicaof "localhost 6379"
+    // ./spwan_redis_server.sh --port 6380 --replicaof "localhost 6379"
 
     var wg sync.WaitGroup;
     
@@ -55,7 +49,7 @@ func main() {
         } else {
             conn.Close();
             masterReplId := getHash(40);
-            masterServer := Server{role: "master", port: masterPortInt, replId: masterReplId, offset: 0}
+            masterServer := typestructs.Server{Role: "master", Port: masterPortInt, ReplId: masterReplId, Offset: 0}
             wg.Add(1);
             go func()  {
                 spawnServer(&masterServer);
@@ -64,7 +58,7 @@ func main() {
         }
 
         slaveReplId := getHash(40);
-        slaveServer := Server{role: "slave", port: portInt, replId: slaveReplId, offset: 0}
+        slaveServer := typestructs.Server{Role: "slave", Port: portInt, ReplId: slaveReplId, Offset: 0}
 
         wg.Add(1);
         go func() {
@@ -73,7 +67,7 @@ func main() {
         }();
     } else if *port != "" && *replicaof == "" {
         masterReplId := getHash(40);
-        masterServer := Server{role: "master", port: portInt, replId: masterReplId, offset: 0}
+        masterServer := typestructs.Server{Role: "master", Port: portInt, ReplId: masterReplId, Offset: 0}
 
         wg.Add(1);
         go func() {
@@ -83,7 +77,7 @@ func main() {
         
     } else {
         masterReplId := getHash(40);
-        masterServer := Server{role: "master", port: portInt, replId: masterReplId, offset: 0}
+        masterServer := typestructs.Server{Role: "master", Port: portInt, ReplId: masterReplId, Offset: 0}
         
         wg.Add(1);
         go func() {
@@ -94,15 +88,15 @@ func main() {
     wg.Wait();
 }
 
-func spawnServer(server *Server) {
-    l, err := net.Listen("tcp", "localhost:"+strconv.Itoa(server.port));
+func spawnServer(server *typestructs.Server) {
+    l, err := net.Listen("tcp", "localhost:"+strconv.Itoa(server.Port));
     if err != nil {
-        fmt.Println("Failed to bind to port: ", server.port);
+        fmt.Println("Failed to bind to port: ", server.Port);
         fmt.Println("Error:", err);
         os.Exit(1);
     }
 
-    if server.role == "slave" {
+    if server.Role == "slave" {
         masterConn := connectToMaster(server);
         performHandShake(masterConn, server);
         go handleConnection(masterConn, server);
@@ -118,7 +112,7 @@ func spawnServer(server *Server) {
     }
 }
 
-func handleConnection(conn net.Conn, server *Server) {
+func handleConnection(conn net.Conn, server *typestructs.Server) {
     for {
         buf := make([]byte, 1024);
 
@@ -132,7 +126,7 @@ func handleConnection(conn net.Conn, server *Server) {
 
         data := buf[:bytesRead];
         if strings.Contains(string(data), "*3\r\n$5\r\nPSYNC\r\n$1\r\n?\r\n$2\r\n-1\r\n") {
-            server.otherServersConn = append(server.otherServersConn, conn);
+            server.OtherServersConn = append(server.OtherServersConn, conn);
         } else if strings.Contains(string(data), "*3\r\n$8\r\nREPLCONF\r\n$3\r\nACK\r\n$") {
             AckCount++;
         }
@@ -165,7 +159,7 @@ func handleConnection(conn net.Conn, server *Server) {
     }
 }
 
-func connectToMaster(server *Server) net.Conn {
+func connectToMaster(server *typestructs.Server) net.Conn {
     conn, err := net.Dial("tcp", "localhost:" + strconv.Itoa(masterPortGlobal));
     fmt.Println("Connected to master server: ", conn.RemoteAddr(), &conn);
 
@@ -175,13 +169,13 @@ func connectToMaster(server *Server) net.Conn {
         return nil;
     }
 
-    server.otherServersConn = append(server.otherServersConn, conn);
+    server.OtherServersConn = append(server.OtherServersConn, conn);
 
     return conn;
 }
 
-func performHandShake(conn net.Conn, server *Server) {
-    slaveServerPort := server.port;
+func performHandShake(conn net.Conn, server *typestructs.Server) {
+    slaveServerPort := server.Port;
     slaveServerPortLen := len(strconv.Itoa(slaveServerPort));
     
     buf := make([]byte, 1024);
