@@ -43,6 +43,8 @@ func HandleIncr(connection net.Conn, server *typestructs.Server, parts []string,
 		}
 		incrData += 1;
 
+		setGetMap[key] = strconv.Itoa(incrData);
+
 		dataToSend := ":" + strconv.Itoa(incrData) + "\r\n";
 		_, err = connection.Write([]byte(dataToSend));
 		if err != nil {
