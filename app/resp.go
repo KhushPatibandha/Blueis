@@ -68,6 +68,10 @@ func handleArray(data []byte, connection net.Conn, server *typestructs.Server) {
 			
 			cmd.HandleSet(connection, server, parts, setGetMap, expiryMap, dataStr);
 			
+		} else if strings.ToLower(parts[2]) == "incr" {
+
+			cmd.HandleIncr(connection, server, parts, setGetMap, expiryMap, dataStr, Dir, Dbfilename)
+
 		} else if strings.ToLower(parts[2]) == "get" {
 
 			cmd.HandleGet(connection, server, parts, setGetMap, expiryMap, dataStr, Dir, Dbfilename);
