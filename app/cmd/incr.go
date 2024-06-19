@@ -39,7 +39,11 @@ func HandleIncr(connection net.Conn, server *typestructs.Server, parts []string,
 
 		incrData, err := strconv.Atoi(keyToGet);
 		if err != nil {
-			fmt.Println("Error converting key to int.");
+			_, err := connection.Write([]byte("-ERR value is not an integer or out of range\r\n"));
+			if err != nil {
+				fmt.Println("Error writing:", err.Error());
+			}
+			return
 		}
 		incrData += 1;
 
@@ -92,7 +96,10 @@ func HandleIncr(connection net.Conn, server *typestructs.Server, parts []string,
 				}
 				incrData, err := strconv.Atoi(value.Value);
 				if err != nil {
-					fmt.Println("Error converting key to int.");
+					_, err := connection.Write([]byte("-ERR value is not an integer or out of range\r\n"));
+					if err != nil {
+						fmt.Println("Error writing:", err.Error());
+					}
 				}
 				incrData += 1;
 
