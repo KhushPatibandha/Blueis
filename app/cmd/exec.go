@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"net"
+	"strconv"
 
 	typestructs "github.com/codecrafters-io/redis-starter-go/typeStructs"
 )
@@ -27,9 +28,23 @@ func HandleExec(connection net.Conn, server *typestructs.Server, connAndCommands
 		return;
 	}
 
+	var returnSlice []string;
+
 	for _, command := range commands {
 		// execute all the commands
-		ParseData([]byte(command), connection, server, ackCount, dir, dbfilename);
+		data := ParseData([]byte(command), connection, server, ackCount, dir, dbfilename, false);
+		returnSlice = append(returnSlice, data);
+	}
+
+	// write the data in an redis protocol array format
+	dataToSend := "*" + strconv.Itoa(len(returnSlice)) + "\r\n";
+	for _, data := range returnSlice {
+		dataToSend += data;
+	}
+
+	_, err := connection.Write([]byte(dataToSend));
+	if err != nil {
+		fmt.Println("Error writing:", err.Error());
 	}
 
 	delete(connAndCommands, connection);

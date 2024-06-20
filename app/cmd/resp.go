@@ -15,20 +15,32 @@ var setGetMap = make(map[string]string);
 var expiryMap = make(map[string]time.Time)
 var connAndCommands = make(map[net.Conn][]string);
 
-func ParseData(data []byte, connection net.Conn, server *typestructs.Server, ackCount *int, dir string, dbfilename string) {
+/*
+	For anyone looking at this code, the flag variable is just the result of my stupidity.
+	i could have handled it better but here we are.
+	flag = true, means write to the connection and flag = false means return the data.
+*/
+
+func ParseData(data []byte, connection net.Conn, server *typestructs.Server, ackCount *int, dir string, dbfilename string, flag bool) string {
+	var dataToReturn string;
 	if data[0] == '$' {
 		handleBulkStrings(data);
 	} else if data[0] == '*' {
-		handleArray(data, connection, server, ackCount, dir, dbfilename);
+		dataToReturn = handleArray(data, connection, server, ackCount, dir, dbfilename, flag);
 	}
+
+	return dataToReturn;
 }
 
-func handleArray(data []byte, connection net.Conn, server *typestructs.Server, ackCount *int, dir string, dbfilename string) {
+func handleArray(data []byte, connection net.Conn, server *typestructs.Server, ackCount *int, dir string, dbfilename string, flag bool) string {
+
+	var dataToReturn string;
+
 	dataStr := string(data);
 	parts := strings.Split(dataStr, "\r\n");
 	parts = parts[:len(parts) - 1];
 	if len(parts) == 1 && parts[0] == "*" {
-		return;
+		return "error";
 	}
 	fmt.Println("parts: ", parts);
 	numberOfElements, _ := strconv.Atoi(strings.Split(parts[0], "*")[1]);
@@ -36,13 +48,13 @@ func handleArray(data []byte, connection net.Conn, server *typestructs.Server, a
 
 	if numberOfElements != actualNumberOfElements {
         fmt.Println("Error: Number of elements does not match")
-        return
+        return "error"
     } else if numberOfElements == 1 {
 		wordLen, _ := strconv.Atoi(strings.Split(parts[1], "$")[1]);
         actualWordLen := len(parts[2]);
         if wordLen != actualWordLen {
             fmt.Println("Error: Word length does not match")
-            return
+            return "error"
         }
 
 		if strings.ToLower(parts[2]) == "ping" {
@@ -64,7 +76,7 @@ func handleArray(data []byte, connection net.Conn, server *typestructs.Server, a
 			actualWordLen := len(parts[i+1]);
 			if wordLen != actualWordLen {
 				fmt.Println("Error: Word length does not match")
-				return
+				return "error"
 			}
 		}
 		if strings.ToLower(parts[2]) == "echo" {
@@ -73,16 +85,16 @@ func handleArray(data []byte, connection net.Conn, server *typestructs.Server, a
 
 		} else if strings.ToLower(parts[2]) == "set" {
 			
-			HandleSet(connection, server, parts, setGetMap, expiryMap, connAndCommands, dataStr);
-			
+			dataToReturn = HandleSet(connection, server, parts, setGetMap, expiryMap, connAndCommands, dataStr, flag);
+
 		} else if strings.ToLower(parts[2]) == "incr" {
 
-			HandleIncr(connection, server, parts, setGetMap, expiryMap, connAndCommands, dataStr, dir, dbfilename)
+			dataToReturn = HandleIncr(connection, server, parts, setGetMap, expiryMap, connAndCommands, dataStr, dir, dbfilename, flag)
 
 		} else if strings.ToLower(parts[2]) == "get" {
 
-			HandleGet(connection, server, parts, setGetMap, expiryMap, dataStr, dir, dbfilename);
-		
+			dataToReturn = HandleGet(connection, server, parts, setGetMap, expiryMap, dataStr, dir, dbfilename, flag);
+
 		} else if strings.ToLower(parts[2]) == "info" {
 			
 			HandleInfo(connection, server, parts);
@@ -125,6 +137,8 @@ func handleArray(data []byte, connection net.Conn, server *typestructs.Server, a
 
 		}
     }
+
+	return dataToReturn;
 }
 
 func handleBulkStrings(date []byte) {

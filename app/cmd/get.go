@@ -11,7 +11,21 @@ import (
 	typestructs "github.com/codecrafters-io/redis-starter-go/typeStructs"
 )
 
-func HandleGet(connection net.Conn, server *typestructs.Server, parts []string, setGetMap map[string]string, expiryMap map[string]time.Time, dataStr string, dir string, dbfilename string) {
+func HandleGet(connection net.Conn, server *typestructs.Server, parts []string, setGetMap map[string]string, expiryMap map[string]time.Time, dataStr string, dir string, dbfilename string, flag bool) string {
+	
+	if flag {
+		_, ok := connAndCommands[connection];
+		if ok {
+			connAndCommands[connection] = append(connAndCommands[connection], dataStr);
+			
+			_, err := connection.Write([]byte("+QUEUED\r\n"));
+			if err != nil {
+				fmt.Println("Error writing:", err.Error());
+			}
+			return "+QUEUED\r\n";
+		}
+	}
+	
 	keyToGet, ok := setGetMap[parts[4]];
 	if ok {
 		expiry, ok := expiryMap[parts[4]];
@@ -20,19 +34,26 @@ func HandleGet(connection net.Conn, server *typestructs.Server, parts []string, 
 			delete(setGetMap, parts[4]);
 			delete(expiryMap, parts[4]);
 
-			_, err := connection.Write([]byte("$-1\r\n"));
-			if err != nil {
-				fmt.Println("Error writing:", err.Error());
+			if flag {
+				_, err := connection.Write([]byte("$-1\r\n"));
+				if err != nil {
+					fmt.Println("Error writing:", err.Error());
+				}
 			}	
 
-			return;
+			return "$-1\r\n";
 		}
 
 		dataToSend := "$" + strconv.Itoa(len(keyToGet)) + "\r\n" + keyToGet + "\r\n";
-		_, err := connection.Write([]byte(dataToSend));
-		if err != nil {
-			fmt.Println("Error writing:", err.Error());
+
+		if flag {
+			_, err := connection.Write([]byte(dataToSend));
+			if err != nil {
+				fmt.Println("Error writing:", err.Error());
+			}
 		}
+
+		return dataToSend;
 	} else {
 		filePath := dir + "/" + dbfilename;
 
@@ -41,7 +62,7 @@ func HandleGet(connection net.Conn, server *typestructs.Server, parts []string, 
 			file, err := os.Open(filePath)
 			if err != nil {
 				fmt.Println("Error opening RDB file:", err)
-				return
+				return "null";
 			}
 			defer file.Close()
 
@@ -50,7 +71,7 @@ func HandleGet(connection net.Conn, server *typestructs.Server, parts []string, 
 			keyValueMap, err := rdbutil.ReadAllKeyValues(file);
 			if err != nil {
 				fmt.Println("Error reading key-value pairs from RDB file:", err)
-				return
+				return "null";
 			}
 
 			// set the values in the map, so that we dont have to read the file again for keys in the rdb file
@@ -63,28 +84,45 @@ func HandleGet(connection net.Conn, server *typestructs.Server, parts []string, 
 			value, ok := keyValueMap[parts[4]]
 			if ok {
 				if value.ExpiryTime != nil && time.Now().After(*value.ExpiryTime) {
+					
+					if flag {
+						_, err := connection.Write([]byte("$-1\r\n"))
+						if err != nil {
+							fmt.Println("Error writing:", err.Error())
+						}
+					}
+
+					return "$-1\r\n";
+				}
+
+				dataToSend := "$" + strconv.Itoa(len(value.Value)) + "\r\n" + value.Value + "\r\n"
+				
+				if flag {
+					_, err := connection.Write([]byte(dataToSend))
+					if err != nil {
+						fmt.Println("Error writing:", err.Error())
+					}
+				}
+				return dataToSend;
+			} else {
+				if flag {
 					_, err := connection.Write([]byte("$-1\r\n"))
 					if err != nil {
 						fmt.Println("Error writing:", err.Error())
 					}
-					return
 				}
-				dataToSend := "$" + strconv.Itoa(len(value.Value)) + "\r\n" + value.Value + "\r\n"
-				_, err := connection.Write([]byte(dataToSend))
-				if err != nil {
-					fmt.Println("Error writing:", err.Error())
-				}
-			} else {
+
+				return "$-1\r\n";
+			}
+		} else {
+			if flag {
 				_, err := connection.Write([]byte("$-1\r\n"))
 				if err != nil {
 					fmt.Println("Error writing:", err.Error())
 				}
 			}
-		} else {
-			_, err := connection.Write([]byte("$-1\r\n"))
-			if err != nil {
-				fmt.Println("Error writing:", err.Error())
-			}
+
+			return "$-1\r\n";
 		}
 	}
 }

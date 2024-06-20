@@ -11,17 +11,19 @@ import (
 	typestructs "github.com/codecrafters-io/redis-starter-go/typeStructs"
 )
 
-func HandleIncr(connection net.Conn, server *typestructs.Server, parts []string, setGetMap map[string]string, expiryMap map[string]time.Time, connAndCommands map[net.Conn][]string, dataStr string, dir string, dbfilename string) {
+func HandleIncr(connection net.Conn, server *typestructs.Server, parts []string, setGetMap map[string]string, expiryMap map[string]time.Time, connAndCommands map[net.Conn][]string, dataStr string, dir string, dbfilename string, flag bool) string {
 	
-	_, ok := connAndCommands[connection];
-	if ok {
-		connAndCommands[connection] = append(connAndCommands[connection], dataStr);
-		
-		_, err := connection.Write([]byte("+QUEUED\r\n"));
-		if err != nil {
-			fmt.Println("Error writing:", err.Error());
+	if flag {
+		_, ok := connAndCommands[connection];
+		if ok {
+			connAndCommands[connection] = append(connAndCommands[connection], dataStr);
+			
+			_, err := connection.Write([]byte("+QUEUED\r\n"));
+			if err != nil {
+				fmt.Println("Error writing:", err.Error());
+			}
+			return "+QUEUED\r\n";
 		}
-		return;
 	}
 	
 	server.Offset += len(dataStr);
@@ -41,33 +43,42 @@ func HandleIncr(connection net.Conn, server *typestructs.Server, parts []string,
 
 			setGetMap[key] = "1";
 
-			_, err := connection.Write([]byte(":1\r\n"));
-			if err != nil {
-				fmt.Println("Error writing:", err.Error());
+			if flag {
+				_, err := connection.Write([]byte(":1\r\n"));
+				if err != nil {
+					fmt.Println("Error writing:", err.Error());
+				}
 			}
 
-			return;
+			return ":1\r\n";
 		}
 
 		incrData, err := strconv.Atoi(keyToGet);
 		if err != nil {
-			_, err := connection.Write([]byte("-ERR value is not an integer or out of range\r\n"));
-			if err != nil {
-				fmt.Println("Error writing:", err.Error());
+
+			if flag {
+				_, err := connection.Write([]byte("-ERR value is not an integer or out of range\r\n"));
+				if err != nil {
+					fmt.Println("Error writing:", err.Error());
+				}
 			}
-			return
+
+			return "-ERR value is not an integer or out of range\r\n";
 		}
 		incrData += 1;
 
 		setGetMap[key] = strconv.Itoa(incrData);
 
 		dataToSend := ":" + strconv.Itoa(incrData) + "\r\n";
-		_, err = connection.Write([]byte(dataToSend));
-		if err != nil {
-			fmt.Println("Error writing:", err.Error());
+
+		if flag {
+			_, err = connection.Write([]byte(dataToSend));
+			if err != nil {
+				fmt.Println("Error writing:", err.Error());
+			}
 		}
 
-		return
+		return dataToSend;
 	} else {
 		filePath := dir + "/" + dbfilename;
 
@@ -75,7 +86,7 @@ func HandleIncr(connection net.Conn, server *typestructs.Server, parts []string,
 			file, err := os.Open(filePath)
 			if err != nil {
 				fmt.Println("Error opening RDB file:", err)
-				return
+				return "null";
 			}
 			defer file.Close()
 
@@ -84,7 +95,7 @@ func HandleIncr(connection net.Conn, server *typestructs.Server, parts []string,
 			keyValueMap, err := rdbutil.ReadAllKeyValues(file);
 			if err != nil {
 				fmt.Println("Error reading key-value pairs from RDB file:", err)
-				return
+				return "null";
 			}
 
 			// set the values in the map, so that we dont have to read the file again for keys in the rdb file
@@ -100,34 +111,46 @@ func HandleIncr(connection net.Conn, server *typestructs.Server, parts []string,
 				if value.ExpiryTime != nil && time.Now().After(*value.ExpiryTime) {
 					setGetMap[key] = "1";
 					
-					_, err := connection.Write([]byte(":1\r\n"));
-					if err != nil {
-						fmt.Println("Error writing:", err.Error())
+					if flag {
+						_, err := connection.Write([]byte(":1\r\n"));
+						if err != nil {
+							fmt.Println("Error writing:", err.Error())
+						}
 					}
-					return
+					return ":1\r\n";
 				}
 				incrData, err := strconv.Atoi(value.Value);
 				if err != nil {
-					_, err := connection.Write([]byte("-ERR value is not an integer or out of range\r\n"));
-					if err != nil {
-						fmt.Println("Error writing:", err.Error());
+					if flag {
+						_, err := connection.Write([]byte("-ERR value is not an integer or out of range\r\n"));
+						if err != nil {
+							fmt.Println("Error writing:", err.Error());
+						}
 					}
+					return "-ERR value is not an integer or out of range\r\n";
 				}
 				incrData += 1;
 
 				dataToSend := ":" + strconv.Itoa(incrData) + "\r\n";
-				_, err = connection.Write([]byte(dataToSend));
-				if err != nil {
-					fmt.Println("Error writing:", err.Error());
+
+				if flag {
+					_, err = connection.Write([]byte(dataToSend));
+					if err != nil {
+						fmt.Println("Error writing:", err.Error());
+					}
 				}
+				return dataToSend;
 			} else {
 				setGetMap[key] = "1";
 					
-				_, err := connection.Write([]byte(":1\r\n"));
-				if err != nil {
-					fmt.Println("Error writing:", err.Error())
+				if flag {
+					_, err := connection.Write([]byte(":1\r\n"));
+					if err != nil {
+						fmt.Println("Error writing:", err.Error())
+					}
 				}
-				return
+
+				return ":1\r\n";
 			}
 
 		} else {
@@ -136,12 +159,14 @@ func HandleIncr(connection net.Conn, server *typestructs.Server, parts []string,
 
 			setGetMap[key] = "1";
 
-			_, err := connection.Write([]byte(":1\r\n"));
-			if err != nil {
-				fmt.Println("Error writing:", err.Error());
+			if flag {
+				_, err := connection.Write([]byte(":1\r\n"));
+				if err != nil {
+					fmt.Println("Error writing:", err.Error());
+				}
 			}
 
-			return;
+			return ":1\r\n";
 		}
 	}
 }
