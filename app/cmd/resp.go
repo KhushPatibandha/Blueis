@@ -69,6 +69,10 @@ func handleArray(data []byte, connection net.Conn, server *typestructs.Server, a
 
 			HandleExec(connection, server, connAndCommands, dir, dbfilename, ackCount);
 
+		} else if strings.ToLower(parts[2]) == "discard" {
+
+			HandleDiscard(connection, connAndCommands);
+
 		}
 	} else {
 		for i := 1; i < len(parts); i += 2 {

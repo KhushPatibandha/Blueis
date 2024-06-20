@@ -113,6 +113,7 @@ func spawnServer(server *typestructs.Server) {
     }
 }
 
+// TODO: Refactor handleConnection method. very messy
 func handleConnection(conn net.Conn, server *typestructs.Server) {
     for {
         buf := make([]byte, 1024);
