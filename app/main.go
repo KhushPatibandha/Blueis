@@ -12,6 +12,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/codecrafters-io/redis-starter-go/app/cmd"
 	typestructs "github.com/codecrafters-io/redis-starter-go/typeStructs"
 )
 
@@ -146,14 +147,14 @@ func handleConnection(conn net.Conn, server *typestructs.Server) {
                 if strings.HasSuffix(parts[len(parts) - 1], "-") || len(parts) == 7 {
                     // get the next element in the array and append it to the current element
                     command[i] = command[i] + "*" + command[i + 1];
-                    ParseData([]byte(command[i]), conn, server)
+                    cmd.ParseData([]byte(command[i]), conn, server, &AckCount, Dir, Dbfilename);
                     i++;
                     continue;
                 }
             } else {
                 command[i] = "*" + command[i]
             }
-            ParseData([]byte(command[i]), conn, server)
+            cmd.ParseData([]byte(command[i]), conn, server, &AckCount, Dir, Dbfilename);
         }
             
     }

@@ -10,7 +10,19 @@ import (
 	typestructs "github.com/codecrafters-io/redis-starter-go/typeStructs"
 )
 
-func HandleSet(connection net.Conn, server *typestructs.Server, parts []string, setGetMap map[string]string, expiryMap map[string]time.Time, dataStr string) {
+func HandleSet(connection net.Conn, server *typestructs.Server, parts []string, setGetMap map[string]string, expiryMap map[string]time.Time, connAndCommands map[net.Conn][]string, dataStr string) {
+
+	_, ok := connAndCommands[connection];
+	if ok {
+		connAndCommands[connection] = append(connAndCommands[connection], dataStr);
+		
+		_, err := connection.Write([]byte("+QUEUED\r\n"));
+		if err != nil {
+			fmt.Println("Error writing:", err.Error());
+		}
+		return;
+	}
+
 	server.Offset += len(dataStr);
 			
 	key	:= parts[4];

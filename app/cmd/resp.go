@@ -1,4 +1,4 @@
-package main
+package cmd
 
 import (
 	"fmt"
@@ -7,23 +7,23 @@ import (
 	"strings"
 	"time"
 
-	"github.com/codecrafters-io/redis-starter-go/app/cmd"
 	typestructs "github.com/codecrafters-io/redis-starter-go/typeStructs"
 )
 
 var streamData = make(map[string][]typestructs.StreamEntry);
 var setGetMap = make(map[string]string);
 var expiryMap = make(map[string]time.Time)
+var connAndCommands = make(map[net.Conn][]string);
 
-func ParseData(data []byte, connection net.Conn, server *typestructs.Server) {
+func ParseData(data []byte, connection net.Conn, server *typestructs.Server, ackCount *int, dir string, dbfilename string) {
 	if data[0] == '$' {
 		handleBulkStrings(data);
 	} else if data[0] == '*' {
-		handleArray(data, connection, server);
+		handleArray(data, connection, server, ackCount, dir, dbfilename);
 	}
 }
 
-func handleArray(data []byte, connection net.Conn, server *typestructs.Server) {
+func handleArray(data []byte, connection net.Conn, server *typestructs.Server, ackCount *int, dir string, dbfilename string) {
 	dataStr := string(data);
 	parts := strings.Split(dataStr, "\r\n");
 	parts = parts[:len(parts) - 1];
@@ -47,11 +47,15 @@ func handleArray(data []byte, connection net.Conn, server *typestructs.Server) {
 
 		if strings.ToLower(parts[2]) == "ping" {
 
-			cmd.HandlePing(connection, server);
+			HandlePing(connection, server);
 		
 		} else if strings.ToLower(parts[2]) == "multi" {
 
-			cmd.HandleMulti(connection);
+			HandleMulti(connection, connAndCommands);
+
+		} else if strings.ToLower(parts[2]) == "exec" {
+
+			HandleExec(connection, server, connAndCommands, dir, dbfilename, ackCount);
 
 		}
 	} else {
@@ -65,59 +69,59 @@ func handleArray(data []byte, connection net.Conn, server *typestructs.Server) {
 		}
 		if strings.ToLower(parts[2]) == "echo" {
 
-			cmd.HandleEcho(connection, server, parts);
+			HandleEcho(connection, server, parts);
 
 		} else if strings.ToLower(parts[2]) == "set" {
 			
-			cmd.HandleSet(connection, server, parts, setGetMap, expiryMap, dataStr);
+			HandleSet(connection, server, parts, setGetMap, expiryMap, connAndCommands, dataStr);
 			
 		} else if strings.ToLower(parts[2]) == "incr" {
 
-			cmd.HandleIncr(connection, server, parts, setGetMap, expiryMap, dataStr, Dir, Dbfilename)
+			HandleIncr(connection, server, parts, setGetMap, expiryMap, connAndCommands, dataStr, dir, dbfilename)
 
 		} else if strings.ToLower(parts[2]) == "get" {
 
-			cmd.HandleGet(connection, server, parts, setGetMap, expiryMap, dataStr, Dir, Dbfilename);
+			HandleGet(connection, server, parts, setGetMap, expiryMap, dataStr, dir, dbfilename);
 		
 		} else if strings.ToLower(parts[2]) == "info" {
 			
-			cmd.HandleInfo(connection, server, parts);
+			HandleInfo(connection, server, parts);
 
 		} else if strings.ToLower(parts[2]) == "replconf" {
 			
-			cmd.HandleReplconf(connection, server, parts, dataStr);
+			HandleReplconf(connection, server, parts, dataStr);
 
 		} else if strings.ToLower(parts[2]) == "psync" && strings.ToLower(parts[4]) == "?" && strings.ToLower(parts[6]) == "-1" {
 			
-			cmd.HandlePsync(connection, server);
+			HandlePsync(connection, server);
 
 		} else if strings.ToLower(parts[2]) == "wait" {
 			
-			cmd.HandleWait(connection, server, parts, &AckCount);
+			HandleWait(connection, server, parts, ackCount);
 
 		} else if strings.ToLower(parts[2]) == "config" {
 
-			cmd.HandleConfig(connection, parts, Dir, Dbfilename);
+			HandleConfig(connection, parts, dir, dbfilename);
 
 		} else if strings.ToLower(parts[2]) == "type" {
 
-			cmd.HandleType(connection, parts, streamData, setGetMap, expiryMap);
+			HandleType(connection, parts, streamData, setGetMap, expiryMap);
 
 		} else if strings.ToLower(parts[2]) == "xadd" {
 
-			cmd.HandleXadd(connection, parts, streamData);
+			HandleXadd(connection, parts, streamData);
 
 		} else if strings.ToLower(parts[2]) == "xrange" {
 
-			cmd.HandleXrange(connection, parts, streamData);
+			HandleXrange(connection, parts, streamData);
 
 		} else if strings.ToLower(parts[2]) == "xread" {
 
-			cmd.HandleXread(connection, parts, streamData);
+			HandleXread(connection, parts, streamData);
 
 		} else if strings.ToLower(parts[2]) == "keys" {
 
-			cmd.HandleKeys(connection, parts, Dir, Dbfilename);
+			HandleKeys(connection, parts, dir, dbfilename);
 
 		}
     }
