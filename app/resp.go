@@ -40,16 +40,19 @@ func handleArray(data []byte, connection net.Conn, server *typestructs.Server) {
     } else if numberOfElements == 1 {
 		wordLen, _ := strconv.Atoi(strings.Split(parts[1], "$")[1]);
         actualWordLen := len(parts[2]);
-		actualWord := parts[2];
         if wordLen != actualWordLen {
             fmt.Println("Error: Word length does not match")
             return
         }
 
-		if strings.ToLower(actualWord) == "ping" {
+		if strings.ToLower(parts[2]) == "ping" {
 
 			cmd.HandlePing(connection, server);
 		
+		} else if strings.ToLower(parts[2]) == "multi" {
+
+			cmd.HandleMulti(connection);
+
 		}
 	} else {
 		for i := 1; i < len(parts); i += 2 {
