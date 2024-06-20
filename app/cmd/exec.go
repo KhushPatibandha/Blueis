@@ -18,9 +18,13 @@ func HandleExec(connection net.Conn, server *typestructs.Server, connAndCommands
 		return;
 	}
 
-	_, err := connection.Write([]byte("+OK\r\n"));
-	if err != nil {
-		fmt.Println("Error writing:", err.Error());
+	if ok && len(commands) == 0 {
+		_, err := connection.Write([]byte("*0\r\n"));
+		if err != nil {
+			fmt.Println("Error writing:", err.Error());
+		}
+		delete(connAndCommands, connection);
+		return;
 	}
 
 	for _, command := range commands {
