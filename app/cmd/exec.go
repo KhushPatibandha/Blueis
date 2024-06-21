@@ -5,7 +5,7 @@ import (
 	"net"
 	"strconv"
 
-	typestructs "github.com/codecrafters-io/redis-starter-go/typeStructs"
+	typestructs "github.com/codecrafters-io/redis-starter-go/app/typeStructs"
 )
 
 func HandleExec(connection net.Conn, server *typestructs.Server, connAndCommands map[net.Conn][]string, dir string, dbfilename string, ackCount *int) {

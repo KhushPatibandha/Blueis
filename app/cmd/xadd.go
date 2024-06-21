@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	typestructs "github.com/codecrafters-io/redis-starter-go/typeStructs"
+	typestructs "github.com/codecrafters-io/redis-starter-go/app/typeStructs"
 )
 
 func HandleXadd(connection net.Conn, parts []string, streamData map[string][]typestructs.StreamEntry) {

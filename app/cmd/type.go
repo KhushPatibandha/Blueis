@@ -5,7 +5,7 @@ import (
 	"net"
 	"time"
 
-	typestructs "github.com/codecrafters-io/redis-starter-go/typeStructs"
+	typestructs "github.com/codecrafters-io/redis-starter-go/app/typeStructs"
 )
 
 func HandleType(connection net.Conn, parts []string, streamData map[string][]typestructs.StreamEntry, setGetMap map[string]string, expiryMap map[string]time.Time) {

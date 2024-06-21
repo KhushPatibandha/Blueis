@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	typestructs "github.com/codecrafters-io/redis-starter-go/typeStructs"
+	typestructs "github.com/codecrafters-io/redis-starter-go/app/typeStructs"
 )
 
 func HandleSet(connection net.Conn, server *typestructs.Server, parts []string, setGetMap map[string]string, expiryMap map[string]time.Time, connAndCommands map[net.Conn][]string, dataStr string, flag bool) string {

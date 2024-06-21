@@ -6,7 +6,7 @@ import (
 	"net"
 	"strconv"
 
-	typestructs "github.com/codecrafters-io/redis-starter-go/typeStructs"
+	typestructs "github.com/codecrafters-io/redis-starter-go/app/typeStructs"
 )
 
 func HandlePsync(connection net.Conn, server *typestructs.Server) {

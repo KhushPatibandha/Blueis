@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"time"
 
-	typestructs "github.com/codecrafters-io/redis-starter-go/typeStructs"
+	typestructs "github.com/codecrafters-io/redis-starter-go/app/typeStructs"
 )
 
 func HandleWait(connection net.Conn, server *typestructs.Server, parts []string, ackCount *int) {

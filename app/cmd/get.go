@@ -8,10 +8,9 @@ import (
 	"time"
 
 	rdbutil "github.com/codecrafters-io/redis-starter-go/app/rdbUtil"
-	typestructs "github.com/codecrafters-io/redis-starter-go/typeStructs"
 )
 
-func HandleGet(connection net.Conn, server *typestructs.Server, parts []string, setGetMap map[string]string, expiryMap map[string]time.Time, dataStr string, dir string, dbfilename string, flag bool) string {
+func HandleGet(connection net.Conn, parts []string, setGetMap map[string]string, expiryMap map[string]time.Time, dataStr string, dir string, dbfilename string, flag bool) string {
 	
 	if flag {
 		_, ok := connAndCommands[connection];

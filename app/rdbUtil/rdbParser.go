@@ -6,7 +6,7 @@ import (
 	"os"
 	"time"
 
-	typestructs "github.com/codecrafters-io/redis-starter-go/typeStructs"
+	typestructs "github.com/codecrafters-io/redis-starter-go/app/typeStructs"
 )
 
 func readSizeEncoding(file *os.File) (int, error) {

@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	typestructs "github.com/codecrafters-io/redis-starter-go/typeStructs"
+	typestructs "github.com/codecrafters-io/redis-starter-go/app/typeStructs"
 )
 
 var streamData = make(map[string][]typestructs.StreamEntry);
@@ -85,7 +85,7 @@ func handleArray(data []byte, connection net.Conn, server *typestructs.Server, a
 		}
 		if strings.ToLower(parts[2]) == "echo" {
 
-			HandleEcho(connection, server, parts);
+			HandleEcho(connection, parts);
 
 		} else if strings.ToLower(parts[2]) == "set" {
 			
@@ -97,7 +97,7 @@ func handleArray(data []byte, connection net.Conn, server *typestructs.Server, a
 
 		} else if strings.ToLower(parts[2]) == "get" {
 
-			dataToReturn = HandleGet(connection, server, parts, setGetMap, expiryMap, dataStr, dir, dbfilename, flag);
+			dataToReturn = HandleGet(connection, parts, setGetMap, expiryMap, dataStr, dir, dbfilename, flag);
 
 		} else if strings.ToLower(parts[2]) == "info" {
 			

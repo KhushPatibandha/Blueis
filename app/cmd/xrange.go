@@ -5,7 +5,7 @@ import (
 	"net"
 	"strconv"
 
-	typestructs "github.com/codecrafters-io/redis-starter-go/typeStructs"
+	typestructs "github.com/codecrafters-io/redis-starter-go/app/typeStructs"
 )
 
 func HandleXrange(connection net.Conn, parts []string, streamData map[string][]typestructs.StreamEntry) {

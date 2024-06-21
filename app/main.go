@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"github.com/codecrafters-io/redis-starter-go/app/cmd"
-	typestructs "github.com/codecrafters-io/redis-starter-go/typeStructs"
+	typestructs "github.com/codecrafters-io/redis-starter-go/app/typeStructs"
 )
 
 var AckCount = 0;
