@@ -129,7 +129,7 @@ func handleConnection(conn net.Conn, server *typestructs.Server) {
         data := buf[:bytesRead];
         if strings.Contains(string(data), "*3\r\n$5\r\nPSYNC\r\n$1\r\n?\r\n$2\r\n-1\r\n") {
             server.OtherServersConn = append(server.OtherServersConn, conn);
-        } else if strings.Contains(string(data), "*3\r\n$8\r\nREPLCONF\r\n$3\r\nACK\r\n$") {
+        } else if strings.Contains(string(data), "*3\r\n$8\r\nREPLCONF\r\n$3\r\nACK\r\n") {
             AckCount++;
         }
 
