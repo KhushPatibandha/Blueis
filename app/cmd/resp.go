@@ -73,6 +73,15 @@ func handleArray(data []byte, connection net.Conn, server *typestructs.Server, a
 
 			HandleDiscard(connection, connAndCommands);
 
+		} else {
+			dataToSend := "-ERR unknown command '" + parts[2] + "'\r\n";
+			if flag {
+				_, err := connection.Write([]byte(dataToSend));
+				if err != nil {
+					fmt.Println("Error writing:", err.Error());
+				}
+			}
+			return dataToSend;
 		}
 	} else {
 		for i := 1; i < len(parts); i += 2 {
@@ -127,6 +136,10 @@ func handleArray(data []byte, connection net.Conn, server *typestructs.Server, a
 
 			dataToReturn = HandleDel(connection, server, parts, setGetMap, expiryMap, connAndCommands, dataStr, flag);
 
+		} else if strings.ToLower(parts[2]) == "exists" {
+
+			dataToReturn = HandleExists(connection, server, parts, setGetMap, expiryMap, connAndCommands, dataStr, flag);
+
 		} else if strings.ToLower(parts[2]) == "info" {
 			
 			HandleInfo(connection, server, parts);
@@ -167,6 +180,15 @@ func handleArray(data []byte, connection net.Conn, server *typestructs.Server, a
 
 			HandleKeys(connection, parts, dir, dbfilename);
 
+		} else {
+			dataToSend := "-ERR unknown command '" + parts[2] + "'\r\n";
+			if flag {
+				_, err := connection.Write([]byte(dataToSend));
+				if err != nil {
+					fmt.Println("Error writing:", err.Error());
+				}
+			}
+			return dataToSend;
 		}
     }
 

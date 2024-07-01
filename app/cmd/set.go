@@ -26,6 +26,16 @@ func HandleSet(connection net.Conn, server *typestructs.Server, parts []string, 
 	}
 
 	server.Offset += len(dataStr);
+
+	if len(parts) < 7 {
+		if flag {
+			_, err := connection.Write([]byte("-ERR wrong number of arguments for command\r\n"));
+			if err != nil {
+				fmt.Println("Error writing:", err.Error());
+			}
+		}
+		return "-ERR wrong number of arguments for command\r\n";
+	}
 			
 	key	:= parts[4];
 	value := parts[6];
