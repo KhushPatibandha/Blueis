@@ -91,6 +91,10 @@ func handleArray(data []byte, connection net.Conn, server *typestructs.Server, a
 			
 			dataToReturn = HandleSet(connection, server, parts, setGetMap, expiryMap, connAndCommands, dataStr, flag);
 
+		} else if strings.ToLower(parts[2]) == "mset" {
+
+			dataToReturn = HandleMset(connection, server, parts, setGetMap, connAndCommands, dataStr, flag);
+
 		} else if strings.ToLower(parts[2]) == "incr" {
 
 			dataToReturn = HandleIncr(connection, server, parts, setGetMap, expiryMap, connAndCommands, dataStr, dir, dbfilename, flag);
