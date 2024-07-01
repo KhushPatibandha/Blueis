@@ -11,7 +11,8 @@ import (
 	typestructs "github.com/codecrafters-io/redis-starter-go/app/typeStructs"
 )
 
-func HandleDecr(connection net.Conn, server *typestructs.Server, parts []string, setGetMap map[string]string, expiryMap map[string]time.Time, connAndCommands map[net.Conn][]string, dataStr string, dir string, dbfilename string, flag bool) string {
+func HandleIncrby(connection net.Conn, server *typestructs.Server, parts []string, setGetMap map[string]string, expiryMap map[string]time.Time, connAndCommands map[net.Conn][]string, dataStr string, dir string, dbfilename string, flag bool) string {
+
 	if flag {
 		_, ok := connAndCommands[connection];
 		if ok {
@@ -26,8 +27,19 @@ func HandleDecr(connection net.Conn, server *typestructs.Server, parts []string,
 	}
 
 	server.Offset += len(dataStr);
+			
+	key	:= parts[4];
 
-	key := parts[4];
+	if len(parts) < 7 {
+		if flag {
+			_, err := connection.Write([]byte("-ERR wrong number of arguments for command\r\n"));
+			if err != nil {
+				fmt.Println("Error writing:", err.Error());
+			}
+		}
+		return "-ERR wrong number of arguments for command\r\n";
+	}
+
 	keyToGet, ok := setGetMap[key];
 
 	if ok {
@@ -37,21 +49,20 @@ func HandleDecr(connection net.Conn, server *typestructs.Server, parts []string,
 			delete(setGetMap, key);
 			delete(expiryMap, key);
 
-			// insted of returning -1, add the key to setGetMap with value 1 and return that
+			// insted of returning -1, add the key to setGetMap with value given and return that
 
-			setGetMap[key] = "-1";
-
+			setGetMap[key] = parts[6];
+			dataToSend := ":" + parts[6] + "\r\n";
 			if flag {
-				_, err := connection.Write([]byte(":-1\r\n"));
+				_, err := connection.Write([]byte(dataToSend));
 				if err != nil {
 					fmt.Println("Error writing:", err.Error());
 				}
 			}
-
-			return ":-1\r\n";
+			return dataToSend;
 		}
 
-		decrData, err := strconv.Atoi(keyToGet);
+		incrData, err := strconv.Atoi(keyToGet);
 		if err != nil {
 
 			if flag {
@@ -63,9 +74,11 @@ func HandleDecr(connection net.Conn, server *typestructs.Server, parts []string,
 
 			return "-ERR value is not an integer or out of range\r\n";
 		}
-		decrData -= 1;
-		setGetMap[key] = strconv.Itoa(decrData);
-		dataToSend := ":" + strconv.Itoa(decrData) + "\r\n";
+		incrBy, _ := strconv.Atoi(parts[6]);
+		incrData += incrBy;
+		setGetMap[key] = strconv.Itoa(incrData);
+
+		dataToSend := ":" + strconv.Itoa(incrData) + "\r\n";
 
 		if flag {
 			_, err = connection.Write([]byte(dataToSend));
@@ -77,9 +90,9 @@ func HandleDecr(connection net.Conn, server *typestructs.Server, parts []string,
 		return dataToSend;
 	} else {
 		filePath := dir + "/" + dbfilename;
-		if filePath != "/" {
 
-			file, err := os.Open(filePath);
+		if filePath != "/" {
+			file, err := os.Open(filePath)
 			if err != nil {
 				fmt.Println("Error opening RDB file:", err)
 				return "null";
@@ -102,19 +115,20 @@ func HandleDecr(connection net.Conn, server *typestructs.Server, parts []string,
 			}
 
 			value, ok := keyValueMap[key];
+
 			if ok {
 				if value.ExpiryTime != nil && time.Now().After(*value.ExpiryTime) {
-					setGetMap[key] = "-1";
+					setGetMap[key] = parts[6];
+					dataToSend := ":" + parts[6] + "\r\n";
 					if flag {
-						_, err := connection.Write([]byte(":-1\r\n"));
+						_, err := connection.Write([]byte(dataToSend));
 						if err != nil {
 							fmt.Println("Error writing:", err.Error());
 						}
 					}
-		
-					return ":-1\r\n";
+					return dataToSend;
 				}
-				decrData, err := strconv.Atoi(keyToGet);
+				incrData, err := strconv.Atoi(keyToGet);
 				if err != nil {
 		
 					if flag {
@@ -126,9 +140,11 @@ func HandleDecr(connection net.Conn, server *typestructs.Server, parts []string,
 		
 					return "-ERR value is not an integer or out of range\r\n";
 				}
-				decrData -= 1;
-				setGetMap[key] = strconv.Itoa(decrData);
-				dataToSend := ":" + strconv.Itoa(decrData) + "\r\n";
+				incrBy, _ := strconv.Atoi(parts[6]);
+				incrData += incrBy;
+				setGetMap[key] = strconv.Itoa(incrData);
+		
+				dataToSend := ":" + strconv.Itoa(incrData) + "\r\n";
 		
 				if flag {
 					_, err = connection.Write([]byte(dataToSend));
@@ -138,28 +154,28 @@ func HandleDecr(connection net.Conn, server *typestructs.Server, parts []string,
 				}
 		
 				return dataToSend;
+
 			} else {
-				setGetMap[key] = "-1";
+				setGetMap[key] = parts[6];
+				dataToSend := ":" + parts[6] + "\r\n";
 				if flag {
-					_, err := connection.Write([]byte(":-1\r\n"));
+					_, err := connection.Write([]byte(dataToSend));
 					if err != nil {
 						fmt.Println("Error writing:", err.Error());
 					}
 				}
-	
-				return ":-1\r\n";
+				return dataToSend;
 			}
-
 		} else {
-			setGetMap[key] = "-1";
+			setGetMap[key] = parts[6];
+			dataToSend := ":" + parts[6] + "\r\n";
 			if flag {
-				_, err := connection.Write([]byte(":-1\r\n"));
+				_, err := connection.Write([]byte(dataToSend));
 				if err != nil {
 					fmt.Println("Error writing:", err.Error());
 				}
 			}
-
-			return ":-1\r\n";
+			return dataToSend;
 		}
 	}
 }

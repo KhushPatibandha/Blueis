@@ -95,6 +95,14 @@ func handleArray(data []byte, connection net.Conn, server *typestructs.Server, a
 
 			dataToReturn = HandleIncr(connection, server, parts, setGetMap, expiryMap, connAndCommands, dataStr, dir, dbfilename, flag);
 
+		} else if strings.ToLower(parts[2]) == "incrby" {
+
+			dataToReturn = HandleIncrby(connection, server, parts, setGetMap, expiryMap, connAndCommands, dataStr, dir, dbfilename, flag);
+
+		} else if strings.ToLower(parts[2]) == "decrby" {
+
+			dataToReturn = HandleDecrby(connection, server, parts, setGetMap, expiryMap, connAndCommands, dataStr, dir, dbfilename, flag);
+
 		} else if strings.ToLower(parts[2]) == "decr" {
 
 			dataToReturn = HandleDecr(connection, server, parts, setGetMap, expiryMap, connAndCommands, dataStr, dir, dbfilename, flag);
