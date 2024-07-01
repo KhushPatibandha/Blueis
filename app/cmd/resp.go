@@ -12,7 +12,8 @@ import (
 
 var streamData = make(map[string][]typestructs.StreamEntry);
 var setGetMap = make(map[string]string);
-var expiryMap = make(map[string]time.Time)
+var expiryMap = make(map[string]time.Time);
+var listMap = make(map[string][]string);
 var connAndCommands = make(map[net.Conn][]string);
 
 /*
@@ -179,6 +180,26 @@ func handleArray(data []byte, connection net.Conn, server *typestructs.Server, a
 		} else if strings.ToLower(parts[2]) == "keys" {
 
 			HandleKeys(connection, parts, dir, dbfilename);
+
+		} else if strings.ToLower(parts[2]) == "lpush" {
+
+			dataToReturn = HandleLpush(connection, server, parts, listMap, connAndCommands, dataStr, flag);
+
+		} else if strings.ToLower(parts[2]) == "lpop" {
+
+			dataToReturn = HandleLpop(connection, server, parts, listMap, connAndCommands, dataStr, flag);
+
+		} else if strings.ToLower(parts[2]) == "rpush" {
+
+			dataToReturn = HandleRpush(connection, server, parts, listMap, connAndCommands, dataStr, flag);
+
+		} else if strings.ToLower(parts[2]) == "rpop" {
+
+			dataToReturn = HandleRpop(connection, server, parts, listMap, connAndCommands, dataStr, flag);
+
+		} else if strings.ToLower(parts[2]) == "llen" {
+
+			dataToReturn = HandleLlen(connection, server, parts, listMap, connAndCommands, dataStr, flag);
 
 		} else {
 			dataToSend := "-ERR unknown command '" + parts[2] + "'\r\n";
