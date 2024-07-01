@@ -123,6 +123,10 @@ func handleArray(data []byte, connection net.Conn, server *typestructs.Server, a
 
 			dataToReturn = HandleAppend(connection, server, parts, setGetMap, expiryMap, connAndCommands, dataStr, dir, dbfilename, flag);
 
+		} else if strings.ToLower(parts[2]) == "del" {
+
+			dataToReturn = HandleDel(connection, server, parts, setGetMap, expiryMap, connAndCommands, dataStr, flag);
+
 		} else if strings.ToLower(parts[2]) == "info" {
 			
 			HandleInfo(connection, server, parts);
