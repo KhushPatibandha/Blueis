@@ -124,7 +124,7 @@ func HandleDecrby(connection net.Conn, server *typestructs.Server, parts []strin
 					}
 					return dataToSend;
 				}
-				decrData, err := strconv.Atoi(keyToGet);
+				decrData, err := strconv.Atoi(value.Value);
 				if err != nil {
 					if flag {
 						_, err := connection.Write([]byte("-ERR value is not an integer or out of range\r\n"));

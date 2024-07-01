@@ -114,7 +114,7 @@ func HandleDecr(connection net.Conn, server *typestructs.Server, parts []string,
 		
 					return ":-1\r\n";
 				}
-				decrData, err := strconv.Atoi(keyToGet);
+				decrData, err := strconv.Atoi(value.Value);
 				if err != nil {
 		
 					if flag {

@@ -128,7 +128,7 @@ func HandleIncrby(connection net.Conn, server *typestructs.Server, parts []strin
 					}
 					return dataToSend;
 				}
-				incrData, err := strconv.Atoi(keyToGet);
+				incrData, err := strconv.Atoi(value.Value);
 				if err != nil {
 		
 					if flag {

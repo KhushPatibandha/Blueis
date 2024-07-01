@@ -115,6 +115,10 @@ func handleArray(data []byte, connection net.Conn, server *typestructs.Server, a
 
 			dataToReturn = HandleGet(connection, parts, setGetMap, expiryMap, dataStr, dir, dbfilename, flag);
 
+		} else if strings.ToLower(parts[2]) == "mget" {
+
+			dataToReturn = HandleMget(connection, parts, setGetMap, expiryMap, dataStr, dir, dbfilename, flag);
+
 		} else if strings.ToLower(parts[2]) == "append" {
 
 			dataToReturn = HandleAppend(connection, server, parts, setGetMap, expiryMap, connAndCommands, dataStr, dir, dbfilename, flag);
