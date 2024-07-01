@@ -93,7 +93,11 @@ func handleArray(data []byte, connection net.Conn, server *typestructs.Server, a
 
 		} else if strings.ToLower(parts[2]) == "incr" {
 
-			dataToReturn = HandleIncr(connection, server, parts, setGetMap, expiryMap, connAndCommands, dataStr, dir, dbfilename, flag)
+			dataToReturn = HandleIncr(connection, server, parts, setGetMap, expiryMap, connAndCommands, dataStr, dir, dbfilename, flag);
+
+		} else if strings.ToLower(parts[2]) == "decr" {
+
+			dataToReturn = HandleDecr(connection, server, parts, setGetMap, expiryMap, connAndCommands, dataStr, dir, dbfilename, flag);
 
 		} else if strings.ToLower(parts[2]) == "get" {
 
