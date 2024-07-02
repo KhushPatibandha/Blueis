@@ -197,6 +197,10 @@ func handleArray(data []byte, connection net.Conn, server *typestructs.Server, a
 
 			dataToReturn = HandleRpop(connection, server, parts, listMap, connAndCommands, dataStr, flag);
 
+		} else if strings.ToLower(parts[2]) == "lrange" {
+
+			dataToReturn = HandleLrange(connection, parts, listMap, connAndCommands, dataStr, flag);
+
 		} else if strings.ToLower(parts[2]) == "llen" {
 
 			dataToReturn = HandleLlen(connection, server, parts, listMap, connAndCommands, dataStr, flag);
