@@ -14,7 +14,7 @@ var streamData = make(map[string][]typestructs.StreamEntry);
 var setGetMap = make(map[string]string);
 var expiryMap = make(map[string]time.Time);
 var listMap = make(map[string][]string);
-var HashMap = make(map[string][]map[string]string);
+var hashMap = make(map[string]map[string]string);
 var connAndCommands = make(map[net.Conn][]string);
 
 /*
@@ -208,15 +208,15 @@ func handleArray(data []byte, connection net.Conn, server *typestructs.Server, a
 
 		} else if strings.ToLower(parts[2]) == "hset" {
 
-			dataToReturn = HandleHset(connection, server, parts, HashMap, connAndCommands, dataStr, flag);
+			dataToReturn = HandleHset(connection, server, parts, hashMap, connAndCommands, dataStr, flag);
 
 		} else if strings.ToLower(parts[2]) == "hget" {
 
-			dataToReturn = HandleHget(connection, parts, HashMap, connAndCommands, dataStr, flag);
+			dataToReturn = HandleHget(connection, parts, hashMap, connAndCommands, dataStr, flag);
 
 		} else if strings.ToLower(parts[2]) == "hgetall" {
 
-			dataToReturn = HandleHgetall(connection, parts, HashMap, connAndCommands, dataStr, flag);
+			dataToReturn = HandleHgetall(connection, parts, hashMap, connAndCommands, dataStr, flag);
 
 		} else {
 			dataToSend := "-ERR unknown command '" + parts[2] + "'\r\n";

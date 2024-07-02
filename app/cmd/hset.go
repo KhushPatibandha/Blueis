@@ -8,7 +8,7 @@ import (
 	typestructs "github.com/codecrafters-io/redis-starter-go/app/typeStructs"
 )
 
-func HandleHset(connection net.Conn, server *typestructs.Server, parts []string, hashMap map[string][]map[string]string, connAndCommands map[net.Conn][]string, dataStr string, flag bool) string {
+func HandleHset(connection net.Conn, server *typestructs.Server, parts []string, hashMap map[string]map[string]string, connAndCommands map[net.Conn][]string, dataStr string, flag bool) string {
 	if flag {
 		_, ok := connAndCommands[connection];
 		if ok {
@@ -36,23 +36,21 @@ func HandleHset(connection net.Conn, server *typestructs.Server, parts []string,
 	}
 
 	hashKeyName := parts[4];
-	valueMapList, ok := hashMap[hashKeyName];
+	valueMap, ok := hashMap[hashKeyName];
 	if !ok {
-		valueMapList = make([]map[string]string, 0);
+		valueMap = make(map[string]string);
+		hashMap[hashKeyName] = valueMap;
 	}
 
 	count := 0;
 
-	for i := 5; i < partsLen; i+=4 {
+	for i := 5; i < partsLen; i += 4 {
 		field := parts[i + 1];
 		value := parts[i + 3];
-		valueMap := make(map[string]string);
+
 		valueMap[field] = value;
-		valueMapList = append(valueMapList, valueMap);
 		count++;
 	}
-
-	hashMap[hashKeyName] = valueMapList;
 
 	dataToSend := ":" + strconv.Itoa(count) + "\r\n";
 	if flag {

@@ -6,7 +6,7 @@ import (
 	"strconv"
 )
 
-func HandleHget(connection net.Conn, parts []string, hashMap map[string][]map[string]string, connAndCommands map[net.Conn][]string, dataStr string, flag bool) string {
+func HandleHget(connection net.Conn, parts []string, hashMap map[string]map[string]string, connAndCommands map[net.Conn][]string, dataStr string, flag bool) string {
 	if flag {
 		_, ok := connAndCommands[connection];
 		if ok {
@@ -32,7 +32,7 @@ func HandleHget(connection net.Conn, parts []string, hashMap map[string][]map[st
 	}
 
 	hashKeyName := parts[4];
-	valueMapList, ok := hashMap[hashKeyName];
+	valueMap, ok := hashMap[hashKeyName];
 	if !ok {
 		if flag {
 			_, err := connection.Write([]byte("$-1\r\n"));
@@ -43,19 +43,17 @@ func HandleHget(connection net.Conn, parts []string, hashMap map[string][]map[st
 		return "$-1\r\n";
 	}
 
-	field := parts[6];
-	for _, valueMap := range valueMapList {
-		value, ok := valueMap[field];
-		if ok {
-			dataToSend := "$" + strconv.Itoa(len(value)) + "\r\n" + value + "\r\n";
-			if flag {
-				_, err := connection.Write([]byte(dataToSend));
-				if err != nil {
-					fmt.Println("Error writing:", err.Error());
-				}
+	field := parts[6]
+	value, ok := valueMap[field]
+	if ok {
+		dataToSend := "$" + strconv.Itoa(len(value)) + "\r\n" + value + "\r\n"
+		if flag {
+			_, err := connection.Write([]byte(dataToSend))
+			if err != nil {
+				fmt.Println("Error writing:", err.Error())
 			}
-			return dataToSend;
 		}
+		return dataToSend
 	}
 
 	if flag {

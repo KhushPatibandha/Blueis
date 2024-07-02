@@ -6,7 +6,7 @@ import (
 	"strconv"
 )
 
-func HandleHgetall(connection net.Conn, parts []string, hashMap map[string][]map[string]string, connAndCommands map[net.Conn][]string, dataStr string, flag bool) string {
+func HandleHgetall(connection net.Conn, parts []string, hashMap map[string]map[string]string, connAndCommands map[net.Conn][]string, dataStr string, flag bool) string {
 	if flag {
 		_, ok := connAndCommands[connection];
 		if ok {
@@ -21,7 +21,7 @@ func HandleHgetall(connection net.Conn, parts []string, hashMap map[string][]map
 	}
 
 	hashKeyName := parts[4];
-	valueMapList, ok := hashMap[hashKeyName];
+	valueMap, ok := hashMap[hashKeyName];
 	if !ok {
 		if flag {
 			_, err := connection.Write([]byte("*0\r\n"));
@@ -32,12 +32,10 @@ func HandleHgetall(connection net.Conn, parts []string, hashMap map[string][]map
 		return "*0\r\n";
 	}
 
-	dataToSend := "*" + strconv.Itoa(len(valueMapList) * 2) + "\r\n";
-	for _, valueMap := range valueMapList {
-		for key, value := range valueMap {
-			dataToSend += "$" + strconv.Itoa(len(key)) + "\r\n" + key + "\r\n";
-			dataToSend += "$" + strconv.Itoa(len(value)) + "\r\n" + value + "\r\n";
-		}
+	dataToSend := "*" + strconv.Itoa(len(valueMap) * 2) + "\r\n";
+	for key, value := range valueMap {
+		dataToSend += "$" + strconv.Itoa(len(key)) + "\r\n" + key + "\r\n";
+		dataToSend += "$" + strconv.Itoa(len(value)) + "\r\n" + value + "\r\n";
 	}
 
 	if flag {
