@@ -222,6 +222,10 @@ func handleArray(data []byte, connection net.Conn, server *typestructs.Server, a
 
 			dataToReturn = HandleHdel(connection, server, parts, hashMap, connAndCommands, dataStr, flag);
 
+		} else if strings.ToLower(parts[2]) == "hmget" {
+
+			dataToReturn = HandleHmget(connection, parts, hashMap, connAndCommands, dataStr, flag);
+
 		} else {
 			dataToSend := "-ERR unknown command '" + parts[2] + "'\r\n";
 			if flag {
