@@ -239,6 +239,10 @@ func handleArray(data []byte, connection net.Conn, server *typestructs.Server, a
 
 			dataToReturn = HandleSismember(connection, parts, setMap, connAndCommands, dataStr, flag);
 
+		} else if strings.ToLower(parts[2]) == "srem" {
+
+			dataToReturn = HandleSrem(connection, server, parts, setMap, connAndCommands, dataStr, flag);
+
 		} else {
 			dataToSend := "-ERR unknown command '" + parts[2] + "'\r\n";
 			if flag {
