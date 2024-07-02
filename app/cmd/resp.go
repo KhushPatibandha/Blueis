@@ -15,6 +15,7 @@ var setGetMap = make(map[string]string);
 var expiryMap = make(map[string]time.Time);
 var listMap = make(map[string][]string);
 var hashMap = make(map[string]map[string]string);
+var setMap = make(map[string]map[string]string);
 var connAndCommands = make(map[net.Conn][]string);
 
 /*
@@ -225,6 +226,14 @@ func handleArray(data []byte, connection net.Conn, server *typestructs.Server, a
 		} else if strings.ToLower(parts[2]) == "hmget" {
 
 			dataToReturn = HandleHmget(connection, parts, hashMap, connAndCommands, dataStr, flag);
+
+		} else if strings.ToLower(parts[2]) == "sadd" {
+
+			dataToReturn = HandleSadd(connection, server, parts, setMap, connAndCommands, dataStr, flag);
+
+		} else if strings.ToLower(parts[2]) == "smembers" {
+
+			dataToReturn = HandleSmembers(connection, parts, setMap, connAndCommands, dataStr, flag);
 
 		} else {
 			dataToSend := "-ERR unknown command '" + parts[2] + "'\r\n";
