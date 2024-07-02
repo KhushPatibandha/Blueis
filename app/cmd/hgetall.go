@@ -1,0 +1,50 @@
+package cmd
+
+import (
+	"fmt"
+	"net"
+	"strconv"
+)
+
+func HandleHgetall(connection net.Conn, parts []string, hashMap map[string][]map[string]string, connAndCommands map[net.Conn][]string, dataStr string, flag bool) string {
+	if flag {
+		_, ok := connAndCommands[connection];
+		if ok {
+			connAndCommands[connection] = append(connAndCommands[connection], dataStr);
+			
+			_, err := connection.Write([]byte("+QUEUED\r\n"));
+			if err != nil {
+				fmt.Println("Error writing:", err.Error());
+			}
+			return "+QUEUED\r\n";
+		}
+	}
+
+	hashKeyName := parts[4];
+	valueMapList, ok := hashMap[hashKeyName];
+	if !ok {
+		if flag {
+			_, err := connection.Write([]byte("*0\r\n"));
+			if err != nil {
+				fmt.Println("Error writing:", err.Error());
+			}
+		}
+		return "*0\r\n";
+	}
+
+	dataToSend := "*" + strconv.Itoa(len(valueMapList) * 2) + "\r\n";
+	for _, valueMap := range valueMapList {
+		for key, value := range valueMap {
+			dataToSend += "$" + strconv.Itoa(len(key)) + "\r\n" + key + "\r\n";
+			dataToSend += "$" + strconv.Itoa(len(value)) + "\r\n" + value + "\r\n";
+		}
+	}
+
+	if flag {
+		_, err := connection.Write([]byte(dataToSend));
+		if err != nil {
+			fmt.Println("Error writing:", err.Error());
+		}
+	}
+	return dataToSend;
+}
