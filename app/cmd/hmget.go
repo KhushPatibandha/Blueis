@@ -6,7 +6,7 @@ import (
 	"strconv"
 )
 
-func HandleHmget(connection net.Conn, parts []string, hashMap map[string]map[string]string, connAndCommands map[net.Conn][]string, dataStr string, flag bool) string {
+func HandleHmget(connection net.Conn, parts []string, hashMap map[string]map[string]string, setMap map[string]map[string]string, listMap map[string][]string, connAndCommands map[net.Conn][]string, dataStr string, flag bool) string {
 	if flag {
 		_, ok := connAndCommands[connection];
 		if ok {
@@ -34,6 +34,18 @@ func HandleHmget(connection net.Conn, parts []string, hashMap map[string]map[str
 	hashKeyName := parts[4];
 	valueMap, ok := hashMap[hashKeyName];
 	if !ok {
+		_, ok = setMap[hashKeyName];
+		_, ok1 := listMap[hashKeyName];
+		if ok || ok1 {
+			if flag {
+				_, err := connection.Write([]byte("-WRONGTYPE Operation against a key holding the wrong kind of value\r\n"));
+				if err != nil {
+					fmt.Println("Error writing:", err.Error());
+				}
+			}
+			return "-WRONGTYPE Operation against a key holding the wrong kind of value\r\n";
+		}
+		
 		if flag {
 			_, err := connection.Write([]byte("*1\r\n$-1\r\n"))
 			if err != nil {

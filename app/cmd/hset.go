@@ -8,7 +8,7 @@ import (
 	typestructs "github.com/codecrafters-io/redis-starter-go/app/typeStructs"
 )
 
-func HandleHset(connection net.Conn, server *typestructs.Server, parts []string, hashMap map[string]map[string]string, connAndCommands map[net.Conn][]string, dataStr string, flag bool) string {
+func HandleHset(connection net.Conn, server *typestructs.Server, parts []string, hashMap map[string]map[string]string, setMap map[string]map[string]string, listMap map[string][]string, connAndCommands map[net.Conn][]string, dataStr string, flag bool) string {
 	if flag {
 		_, ok := connAndCommands[connection];
 		if ok {
@@ -38,6 +38,17 @@ func HandleHset(connection net.Conn, server *typestructs.Server, parts []string,
 	hashKeyName := parts[4];
 	valueMap, ok := hashMap[hashKeyName];
 	if !ok {
+		_, ok = setMap[hashKeyName];
+		_, ok1 := listMap[hashKeyName];
+		if ok || ok1 {
+			if flag {
+				_, err := connection.Write([]byte("-WRONGTYPE Operation against a key holding the wrong kind of value\r\n"));
+				if err != nil {
+					fmt.Println("Error writing:", err.Error());
+				}
+			}
+			return "-WRONGTYPE Operation against a key holding the wrong kind of value\r\n";
+		}
 		valueMap = make(map[string]string);
 		hashMap[hashKeyName] = valueMap;
 	}

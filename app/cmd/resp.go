@@ -185,63 +185,63 @@ func handleArray(data []byte, connection net.Conn, server *typestructs.Server, a
 
 		} else if strings.ToLower(parts[2]) == "lpush" {
 
-			dataToReturn = HandleLpush(connection, server, parts, listMap, connAndCommands, dataStr, flag);
+			dataToReturn = HandleLpush(connection, server, parts, listMap, hashMap, setMap, connAndCommands, dataStr, flag);
 
 		} else if strings.ToLower(parts[2]) == "lpop" {
 
-			dataToReturn = HandleLpop(connection, server, parts, listMap, connAndCommands, dataStr, flag);
+			dataToReturn = HandleLpop(connection, server, parts, listMap, hashMap, setMap, connAndCommands, dataStr, flag);
 
 		} else if strings.ToLower(parts[2]) == "rpush" {
 
-			dataToReturn = HandleRpush(connection, server, parts, listMap, connAndCommands, dataStr, flag);
+			dataToReturn = HandleRpush(connection, server, parts, listMap, hashMap, setMap, connAndCommands, dataStr, flag);
 
 		} else if strings.ToLower(parts[2]) == "rpop" {
 
-			dataToReturn = HandleRpop(connection, server, parts, listMap, connAndCommands, dataStr, flag);
+			dataToReturn = HandleRpop(connection, server, parts, listMap, hashMap, setMap, connAndCommands, dataStr, flag);
 
 		} else if strings.ToLower(parts[2]) == "lrange" {
 
-			dataToReturn = HandleLrange(connection, parts, listMap, connAndCommands, dataStr, flag);
+			dataToReturn = HandleLrange(connection, parts, listMap, hashMap, setMap, connAndCommands, dataStr, flag);
 
 		} else if strings.ToLower(parts[2]) == "llen" {
 
-			dataToReturn = HandleLlen(connection, server, parts, listMap, connAndCommands, dataStr, flag);
+			dataToReturn = HandleLlen(connection, server, parts, listMap, hashMap, setMap, connAndCommands, dataStr, flag);
 
 		} else if strings.ToLower(parts[2]) == "hset" {
 
-			dataToReturn = HandleHset(connection, server, parts, hashMap, connAndCommands, dataStr, flag);
+			dataToReturn = HandleHset(connection, server, parts, hashMap, setMap, listMap, connAndCommands, dataStr, flag);
 
 		} else if strings.ToLower(parts[2]) == "hget" {
 
-			dataToReturn = HandleHget(connection, parts, hashMap, connAndCommands, dataStr, flag);
+			dataToReturn = HandleHget(connection, parts, hashMap, setMap, listMap, connAndCommands, dataStr, flag);
 
 		} else if strings.ToLower(parts[2]) == "hgetall" {
 
-			dataToReturn = HandleHgetall(connection, parts, hashMap, connAndCommands, dataStr, flag);
+			dataToReturn = HandleHgetall(connection, parts, hashMap, setMap, listMap, connAndCommands, dataStr, flag);
 
 		} else if strings.ToLower(parts[2]) == "hdel" {
 
-			dataToReturn = HandleHdel(connection, server, parts, hashMap, connAndCommands, dataStr, flag);
+			dataToReturn = HandleHdel(connection, server, parts, hashMap, setMap, listMap, connAndCommands, dataStr, flag);
 
 		} else if strings.ToLower(parts[2]) == "hmget" {
 
-			dataToReturn = HandleHmget(connection, parts, hashMap, connAndCommands, dataStr, flag);
+			dataToReturn = HandleHmget(connection, parts, hashMap, setMap, listMap, connAndCommands, dataStr, flag);
 
 		} else if strings.ToLower(parts[2]) == "sadd" {
 
-			dataToReturn = HandleSadd(connection, server, parts, setMap, connAndCommands, dataStr, flag);
+			dataToReturn = HandleSadd(connection, server, parts, setMap, hashMap, listMap, connAndCommands, dataStr, flag);
 
 		} else if strings.ToLower(parts[2]) == "smembers" {
 
-			dataToReturn = HandleSmembers(connection, parts, setMap, connAndCommands, dataStr, flag);
+			dataToReturn = HandleSmembers(connection, parts, setMap, hashMap, listMap, connAndCommands, dataStr, flag);
 
 		} else if strings.ToLower(parts[2]) == "sismember" {
 
-			dataToReturn = HandleSismember(connection, parts, setMap, connAndCommands, dataStr, flag);
+			dataToReturn = HandleSismember(connection, parts, setMap, hashMap, listMap, connAndCommands, dataStr, flag);
 
 		} else if strings.ToLower(parts[2]) == "srem" {
 
-			dataToReturn = HandleSrem(connection, server, parts, setMap, connAndCommands, dataStr, flag);
+			dataToReturn = HandleSrem(connection, server, parts, setMap, hashMap, listMap, connAndCommands, dataStr, flag);
 
 		} else {
 			dataToSend := "-ERR unknown command '" + parts[2] + "'\r\n";

@@ -8,7 +8,7 @@ import (
 	typestructs "github.com/codecrafters-io/redis-starter-go/app/typeStructs"
 )
 
-func HandleSrem(connection net.Conn, server *typestructs.Server, parts []string, setMap map[string]map[string]string, connAndCommands map[net.Conn][]string, dataStr string, flag bool) string {
+func HandleSrem(connection net.Conn, server *typestructs.Server, parts []string, setMap map[string]map[string]string, hashMap map[string]map[string]string, listMap map[string][]string, connAndCommands map[net.Conn][]string, dataStr string, flag bool) string {
 	if flag {
 		_, ok := connAndCommands[connection];
 		if ok {
@@ -38,6 +38,18 @@ func HandleSrem(connection net.Conn, server *typestructs.Server, parts []string,
 	setKeyName := parts[4];
 	valueMap, ok := setMap[setKeyName];
 	if !ok {
+		_, ok = hashMap[setKeyName];
+		_, ok1 := listMap[setKeyName];
+		if ok || ok1 {
+			if flag {
+				_, err := connection.Write([]byte("-WRONGTYPE Operation against a key holding the wrong kind of value\r\n"));
+				if err != nil {
+					fmt.Println("Error writing:", err.Error());
+				}
+			}
+			return "-WRONGTYPE Operation against a key holding the wrong kind of value\r\n";
+		}
+		
 		if flag {
 			_, err := connection.Write([]byte(":0\r\n"));
 			if err != nil {
