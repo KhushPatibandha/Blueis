@@ -9,7 +9,7 @@ import (
 	typestructs "github.com/codecrafters-io/redis-starter-go/app/typeStructs"
 )
 
-func HandleExists(connection net.Conn, server *typestructs.Server, parts []string, setGetMap map[string]string, expiryMap map[string]time.Time, connAndCommands map[net.Conn][]string, dataStr string, flag bool) string {
+func HandleExists(connection net.Conn, server *typestructs.Server, parts []string, setGetMap map[string]string, expiryMap map[string]time.Time, listMap map[string][]string, hashMap map[string]map[string]string, setMap map[string]map[string]string, connAndCommands map[net.Conn][]string, dataStr string, flag bool) string {
 	if flag {
 		_, ok := connAndCommands[connection];
 		if ok {
@@ -35,6 +35,12 @@ func HandleExists(connection net.Conn, server *typestructs.Server, parts []strin
 			} else {
 				count++;
 			}
+		}
+		_, ok1 := listMap[parts[i]];
+		_, ok2 := hashMap[parts[i]];
+		_, ok3 := setMap[parts[i]];
+		if ok1 || ok2 || ok3 {
+			count++;
 		}
 	}
 

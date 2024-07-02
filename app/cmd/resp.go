@@ -137,11 +137,11 @@ func handleArray(data []byte, connection net.Conn, server *typestructs.Server, a
 
 		} else if strings.ToLower(parts[2]) == "del" {
 
-			dataToReturn = HandleDel(connection, server, parts, setGetMap, expiryMap, connAndCommands, dataStr, flag);
+			dataToReturn = HandleDel(connection, server, parts, setGetMap, expiryMap, listMap, hashMap, setMap, connAndCommands, dataStr, flag);
 
 		} else if strings.ToLower(parts[2]) == "exists" {
 
-			dataToReturn = HandleExists(connection, server, parts, setGetMap, expiryMap, connAndCommands, dataStr, flag);
+			dataToReturn = HandleExists(connection, server, parts, setGetMap, expiryMap, listMap, hashMap, setMap, connAndCommands, dataStr, flag);
 
 		} else if strings.ToLower(parts[2]) == "info" {
 			
