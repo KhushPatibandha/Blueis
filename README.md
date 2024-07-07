@@ -40,14 +40,14 @@ Also in case if you want to start more then 1 slave server. you can run this sam
 - If used with `--replicaof` flag, sets the port for slave server.
 
 #### `--dir`
-- Path to the RDB file
+- Path to the RDB file.
 - Always use along with `--dbfilename`.
-- Usage: `./spawn_redis_server.sh --dir /tmp/redis-files --dbfilename dump.rdb'
+- Usage: `./spawn_redis_server.sh --dir /tmp/redis-files --dbfilename dump.rdb'.
 
 #### `--dbfilename`
-- Name of the RDB file
-- Always use along with `--dir`
-- Usage: `./spawn_redis_server.sh --dir /tmp/redis-files --dbfilename dump.rdb'
+- Name of the RDB file.
+- Always use along with `--dir`.
+- Usage: `./spawn_redis_server.sh --dir /tmp/redis-files --dbfilename dump.rdb'.
 
 ### Connect to the servers
 
