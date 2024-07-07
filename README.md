@@ -50,7 +50,6 @@ Also in case if you want to start more then 1 slave server. you can run this sam
 - Usage: `./spawn_redis_server.sh --dir /tmp/redis-files --dbfilename dump.rdb'.
 
 ### Connect to the servers
-
 `redis-cli -p <port-number>`
 
 eg: `redis-cli -p 6379`
