@@ -8,7 +8,7 @@ import (
 	typestructs "github.com/codecrafters-io/redis-starter-go/app/typeStructs"
 )
 
-func HandleType(connection net.Conn, parts []string, streamData map[string][]typestructs.StreamEntry, setGetMap map[string]string, expiryMap map[string]time.Time) {
+func HandleType(connection net.Conn, parts []string, streamData map[string][]typestructs.StreamEntry, setGetMap map[string]string, expiryMap map[string]time.Time, listMap map[string][]string, hashMap map[string]map[string]string, setMap map[string]map[string]string) {
 	_, ok := streamData[parts[4]];
 	if ok {
 		_, err := connection.Write([]byte("+stream\r\n"));
@@ -40,6 +40,34 @@ func HandleType(connection net.Conn, parts []string, streamData map[string][]typ
 		}
 		return;
 	} else {
+
+		_, ok = listMap[parts[4]];
+		if ok {
+			_, err := connection.Write([]byte("+list\r\n"));
+			if err != nil {
+				fmt.Println("Error writing:", err.Error());
+			}
+			return;
+		}
+
+		_, ok = hashMap[parts[4]];
+		if ok {
+			_, err := connection.Write([]byte("+hash\r\n"));
+			if err != nil {
+				fmt.Println("Error writing:", err.Error());
+			}
+			return;
+		}
+
+		_, ok = setMap[parts[4]];
+		if ok {
+			_, err := connection.Write([]byte("+set\r\n"));
+			if err != nil {
+				fmt.Println("Error writing:", err.Error());
+			}
+			return;
+		}
+
 		_, err := connection.Write([]byte("+none\r\n"));
 		if err != nil {
 			fmt.Println("Error writing:", err.Error());

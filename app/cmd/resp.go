@@ -165,7 +165,7 @@ func handleArray(data []byte, connection net.Conn, server *typestructs.Server, a
 
 		} else if strings.ToLower(parts[2]) == "type" {
 
-			HandleType(connection, parts, streamData, setGetMap, expiryMap);
+			HandleType(connection, parts, streamData, setGetMap, expiryMap, listMap, hashMap, setMap);
 
 		} else if strings.ToLower(parts[2]) == "xadd" {
 
