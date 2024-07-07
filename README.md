@@ -1,36 +1,114 @@
-[![progress-banner](https://backend.codecrafters.io/progress/redis/6d949976-4b32-44f2-9d94-a298d2f0fdfc)](https://app.codecrafters.io/users/codecrafters-bot?r=2qF)
 
-This is a starting point for Go solutions to the
-["Build Your Own Redis" Challenge](https://codecrafters.io/challenges/redis).
 
-In this challenge, you'll build a toy Redis clone that's capable of handling
-basic commands like `PING`, `SET` and `GET`. Along the way we'll learn about
-event loops, the Redis protocol and more.
 
-**Note**: If you're viewing this repo on GitHub, head over to
-[codecrafters.io](https://codecrafters.io) to try the challenge.
 
-# Passing the first stage
 
-The entry point for your Redis implementation is in `app/server.go`. Study and
-uncomment the relevant code, and push your changes to pass the first stage:
 
-```sh
-git add .
-git commit -m "pass 1st stage" # any msg
-git push origin master
-```
 
-That's all!
 
-# Stage 2 & beyond
 
-Note: This section is for stages 2 and beyond.
 
-1. Ensure you have `go (1.19)` installed locally
-1. Run `./spawn_redis_server.sh` to run your Redis server, which is implemented
-   in `app/server.go`.
-1. Commit your changes and run `git push origin master` to submit your solution
-   to CodeCrafters. Test output will be streamed to your terminal.
+# Blueis
 
-   
+Super fast drop-in replacement of the in memory key-value store redis in golang
+
+## Run Locally
+
+### Clone the project
+`git clone https://github.com/KhushPatibandha/Blueis.git`
+
+### Navigate to the project directory
+`cd .\Blueis\`
+
+### Start the server
+
+#### Single server on default port 6379
+`./spawn_redis_server.sh`
+
+#### Single server on custom port 'X'
+`./spawn_redis_server.sh --port X`
+
+eg: `./spawn_redis_server.sh --port 5555`
+
+#### Start master server on port 'X' along with replica server on port 'Y'
+`./spawn_redis_server.sh --port Y --replicaof "localhost X"`
+
+eg: `./spawn_redis_server.sh --port 5555 --replicaof "localhost 6666"`
+
+Here the master server will start on port 6666 and the replica server (slave server) will start on port 5555.
+
+Also in case if you want to start more then 1 slave server. you can run this same command multiple times with different port number for `--port` flag and same port for `--replicaof` flag.
+
+### Flags
+
+#### `--replicaof`
+- Sets the port for master server.
+- Should always be used with `--port` flag.
+
+#### `--port`
+- If used without `--replicaof` flag, sets the port for the only server (master) that is running.
+- If used with `--replicaof` flag, sets the port for slave server.
+
+#### `--dir`
+- Path to the RDB file
+- Always use along with `--dbfilename`.
+- Usage: `./spawn_redis_server.sh --dir /tmp/redis-files --dbfilename dump.rdb'
+
+#### `--dbfilename`
+- Name of the RDB file
+- Always use along with `--dir`
+- Usage: `./spawn_redis_server.sh --dir /tmp/redis-files --dbfilename dump.rdb'
+
+### Connect to the servers
+
+`redis-cli -p <port-number>`
+
+eg: `redis-cli -p 6379`
+
+## Available commands
+### Misc
+`PING` `ECHO` `INFO`
+### Keys
+`TYPE` `DEL` `EXISTS` `KEYS`
+### Strings
+`SET` `GET` `INCR` `DECR` `INCRBY` `DECRBY` `APPEND` `MGET` `MSET` 
+### Lists
+`LPUSH` `LPOP` `RPUSH` `RPOP` `LRANGE` `LLEN`
+### Hashes
+`HSET` `HGET` `HMGET` `HGETALL` `HDEL`
+### Sets
+`SADD` `SREM` `SISMEMBER` `SMEMBERS`
+### Streams
+`XADD` `XREAD` `XRANGE`
+### Transactions
+`MULTI` `EXEC` `DISCARD`
+### Replication
+`WAIT` `REPLCONF` `PSYNC`
+### RDB Persistence
+`CONFIG GET`
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
