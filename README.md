@@ -1,13 +1,3 @@
-
-
-
-
-
-
-
-
-
-
 # Blueis
 
 Super fast drop-in replacement of the in memory key-value store redis in golang
